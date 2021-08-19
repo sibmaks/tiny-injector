@@ -3,18 +3,17 @@ package xyz.tiny.injector;
 import lombok.extern.slf4j.Slf4j;
 import xyz.tiny.injector.context.IContext;
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.exception.FieldInjectionException;
+import xyz.tiny.injector.exception.MethodInjectionException;
 import xyz.tiny.injector.utils.ReflectionUtils;
+import xyz.tiny.injector.utils.StringUtils;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -42,6 +41,7 @@ public class Injector {
         log.debug("Start injection");
         doInjections(globalComponents, context);
         log.debug("Injection finished");
+
         return context;
     }
 
@@ -55,36 +55,38 @@ public class Injector {
     }
 
     private static void doMethodInjection(IContext context, Map.Entry<String, Class<? super Object>> entry,
-                                          ComponentDefinition<?> sourceComponent)
-            throws InvocationTargetException, IllegalAccessException {
+                                          ComponentDefinition<?> sourceComponent) {
         Set<Method> methods = ReflectionUtils.getMethods(entry.getValue());
         for (Method method : methods) {
-            if(!method.isAnnotationPresent(Inject.class)) {
+            List<Annotation> annotations = ReflectionUtils.getMethodAnnotations(entry.getValue(), method);
+            if(annotations.stream().noneMatch(it -> it.annotationType() == Inject.class)) {
                 continue;
             }
             if(method.getParameterCount() != 1) {
-                throw new IllegalStateException(String.format("Injected method should have only 1 parameter: %s",
-                        method.getName()));
+                throw new IllegalStateException(String.format("Injected method should have only 1 parameter: %s#%s",
+                        entry.getValue().getName(), method.getName()));
             }
-            Named named = method.getAnnotation(Named.class);
-            if(named == null) {
-                throw new IllegalStateException(
-                        String.format("In case of method injection @Named should be used: %s",
-                                method.getName()));
+            Named named = (Named) annotations.stream()
+                    .filter(it -> it.annotationType() == Named.class)
+                    .findFirst()
+                    .orElse(null);
+            String name = named == null ? null : named.value();
+            if(name == null || "".equals(name)) {
+                Class<?> parameterType = method.getParameterTypes()[0];
+                name = StringUtils.toLowerCase1st(parameterType.getSimpleName());
             }
-            if(named.value() == null || "".equals(named.value())) {
-                throw new IllegalStateException(
-                        String.format("@Named should has value in case of method injection: %s",
-                                method.getName()));
-            }
-            Object component = context.getComponent(named.value());
+            Object component = context.getComponent(name);
             if(component == null) {
                 throw new IllegalStateException(
                         String.format("Component with name '%s' not found. Requested in component: %s",
-                                named.value(), entry.getKey()));
+                                name, entry.getKey()));
             }
             method.setAccessible(true);
-            method.invoke(sourceComponent.getComponentInstance(), component);
+            try {
+                method.invoke(sourceComponent.getComponentInstance(), component);
+            } catch (Throwable throwable) {
+                throw new MethodInjectionException(throwable);
+            }
             method.setAccessible(false);
         }
     }
@@ -94,15 +96,23 @@ public class Injector {
             throws IllegalAccessException {
         Set<Field> fields = ReflectionUtils.getFields(entry.getValue());
         for (Field field : fields) {
-            if(!field.isAnnotationPresent(Inject.class)) {
+            List<Annotation> annotations = ReflectionUtils.getFieldAnnotations(entry.getValue(), field);
+            if(annotations.stream().noneMatch(it -> it.annotationType() == Inject.class)) {
                 continue;
             }
-            Named named = field.getAnnotation(Named.class);
-            String componentName = named == null || named.value() == null || "".equals(named.value()) ?
+            if(Modifier.isFinal(field.getModifiers())) {
+                throw new FieldInjectionException(String.format("Can't inject final field: %s.%s",
+                        entry.getValue().getName(), field.getName()));
+            }
+            Named named = (Named) annotations.stream()
+                    .filter(it -> it.annotationType() == Named.class)
+                    .findFirst()
+                    .orElse(null);
+            String componentName = named == null || "".equals(named.value()) ?
                     field.getName() : named.value();
             Object component = context.getComponent(componentName);
             if(component == null) {
-                throw new IllegalStateException(
+                throw new FieldInjectionException(
                         String.format("Component with name '%s' not found. Requested in component: %s",
                                 componentName, entry.getKey()));
             }
@@ -112,11 +122,14 @@ public class Injector {
         }
     }
 
-    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents) throws InstantiationException, IllegalAccessException {
+    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents) throws Exception {
         IMutableContext context = new HashMapContext();
         try {
             for (Map.Entry<String, Class<? super Object>> entry : globalComponents.entrySet()) {
-                Object instance = entry.getValue().newInstance();
+                Constructor<? super Object> constructor = entry.getValue().getDeclaredConstructor();
+                constructor.setAccessible(true);
+                Object instance = constructor.newInstance();
+                constructor.setAccessible(false);
                 if (!context.add(entry.getKey(), entry.getValue(), instance)) {
                     throw new IllegalStateException(String.format("Duplicates component name: %s", entry.getKey()));
                 }
@@ -125,6 +138,7 @@ public class Injector {
             context.clear();
             throw throwable;
         }
+        Runtime.getRuntime().addShutdownHook(new Thread(context::clear));
         return context;
     }
 
@@ -136,6 +150,9 @@ public class Injector {
             for (Map.Entry<String, Class<?>> entry : components.entrySet()) {
                 if (entry.getValue().isInterface()) {
                     throw new IllegalStateException(String.format("Interface %s hasn't implementation", entry.getValue().getName()));
+                }
+                if (Modifier.isAbstract(entry.getValue().getModifiers())) {
+                    throw new IllegalStateException(String.format("Abstract class %s hasn't implementation", entry.getValue().getName()));
                 }
                 if (globalComponents.putIfAbsent(entry.getKey(), (Class<? super Object>) entry.getValue()) != null) {
                     throw new IllegalStateException(

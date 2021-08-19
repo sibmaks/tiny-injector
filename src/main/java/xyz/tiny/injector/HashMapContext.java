@@ -37,6 +37,10 @@ class HashMapContext implements IMutableContext {
 
     @Override
     public <T> T getComponent(String componentName) {
-        return (T) components.get(componentName).getComponentInstance();
+        ComponentDefinition<?> definition = components.get(componentName);
+        if(definition == null) {
+            return null;
+        }
+        return (T) definition.getComponentInstance();
     }
 }

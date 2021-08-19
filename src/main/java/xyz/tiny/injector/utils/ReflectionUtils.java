@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
@@ -35,15 +36,13 @@ public class ReflectionUtils {
         for(Class<?> clazz : classes) {
             String name = getComponentName(clazz);
             if("".equals(name)) {
-                char[] simpleName = clazz.getSimpleName().toCharArray();
-                simpleName[0] += 32;
-                name = new String(simpleName);
+                name = StringUtils.toLowerCase1st(clazz.getSimpleName());
             }
             Class<?> aClass = components.get(name);
             if(aClass != null) {
-                if(aClass.isInterface() && aClass.isAssignableFrom(clazz)) {
+                if((aClass.isInterface() || Modifier.isAbstract(aClass.getModifiers())) && aClass.isAssignableFrom(clazz)) {
                     components.put(name, clazz);
-                } else if (!clazz.isInterface() || !clazz.isAssignableFrom(aClass)) {
+                } else if ((!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers())) || !clazz.isAssignableFrom(aClass)) {
                     throw new IllegalStateException(String.format("Duplicate component name: %s for classes: %s, %s",
                             name, aClass.getName(), clazz.getName()));
                 }
@@ -95,7 +94,7 @@ public class ReflectionUtils {
             throw new IllegalArgumentException("Class can't be null");
         }
         return annotationsCache.computeIfAbsent(clazz, it -> {
-            if(it == Object.class) {
+            if (it == Object.class) {
                 return Collections.emptyList();
             }
 
@@ -109,7 +108,7 @@ public class ReflectionUtils {
             }
 
             Class<?> superclass = it.getSuperclass();
-            if(superclass != null) {
+            if (superclass != null) {
                 for (Annotation annotation : getAnnotations(superclass)) {
                     annotations.addAll(getAnnotations(annotation));
                     annotations.add(annotation);
@@ -121,7 +120,7 @@ public class ReflectionUtils {
                 annotations.add(annotation);
             }
 
-            if(!annotations.isEmpty()) {
+            if (!annotations.isEmpty()) {
                 log.trace("Class {} contains annotations: {}", it, annotations);
             } else {
                 log.trace("Class {} not contains annotations", it);
@@ -203,7 +202,73 @@ public class ReflectionUtils {
             return Collections.emptySet();
         }
         Set<Method> methods = new HashSet<>(Arrays.asList(clazz.getDeclaredMethods()));
-        methods.addAll(getMethods(clazz.getSuperclass()));
+        for (Method method : getMethods(clazz.getSuperclass())) {
+            if(Modifier.isPrivate(method.getModifiers()) || methods.stream()
+                    .noneMatch(it -> it.getName().equals(method.getName()) &&
+                            Arrays.equals(it.getParameterTypes(), method.getParameterTypes()))) {
+                methods.add(method);
+            }
+        }
         return methods;
+    }
+
+    public static List<Annotation> getMethodAnnotations(Class<?> clazz, Method method) {
+        if(clazz == null || clazz == Object.class) {
+            return Collections.emptyList();
+        }
+        List<Annotation> annotations = new ArrayList<>();
+        Class<?> superclass = clazz.getSuperclass();
+        if(superclass != null && superclass != Object.class) {
+            for (Method declaredMethod : superclass.getDeclaredMethods()) {
+                if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
+                        declaredMethod.getName().equals(method.getName()) && Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
+                    annotations.addAll(getMethodAnnotations(superclass, declaredMethod));
+                    break;
+                }
+            }
+        }
+
+        for (Class<?> anInterface : clazz.getInterfaces()) {
+            for (Method declaredMethod : anInterface.getDeclaredMethods()) {
+                if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
+                        declaredMethod.getName().equals(method.getName()) && Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
+                    annotations.addAll(getMethodAnnotations(anInterface, declaredMethod));
+                    break;
+                }
+            }
+        }
+
+        annotations.addAll(Arrays.asList(method.getDeclaredAnnotations()));
+        Collections.reverse(annotations);
+        return annotations;
+    }
+
+    public static List<Annotation> getFieldAnnotations(Class<?> clazz, Field field) {
+        if(clazz == null || clazz == Object.class) {
+            return Collections.emptyList();
+        }
+        List<Annotation> annotations = new ArrayList<>();
+        Class<?> superclass = clazz.getSuperclass();
+        if(superclass != null && superclass != Object.class) {
+            for (Field declaredField : superclass.getDeclaredFields()) {
+                if(!Modifier.isPrivate(declaredField.getModifiers()) && declaredField.getName().equals(field.getName())) {
+                    annotations.addAll(getFieldAnnotations(superclass, declaredField));
+                    break;
+                }
+            }
+        }
+
+        for (Class<?> anInterface : clazz.getInterfaces()) {
+            for (Field declaredField : anInterface.getDeclaredFields()) {
+                if(!Modifier.isPrivate(declaredField.getModifiers()) && declaredField.getName().equals(field.getName())) {
+                    annotations.addAll(getFieldAnnotations(anInterface, declaredField));
+                    break;
+                }
+            }
+        }
+
+        annotations.addAll(Arrays.asList(field.getDeclaredAnnotations()));
+        Collections.reverse(annotations);
+        return annotations;
     }
 }
