@@ -1,4 +1,4 @@
-package xyz.tiny.injector.field_injection_named_default;
+package xyz.tiny.injector.field_injection_abstract;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -12,12 +12,16 @@ import xyz.tiny.injector.context.IContext;
 class InjectorTest {
 
     @Test
-    void defaultComponentNameInjection() throws Throwable {
+    void canInjectAbstract() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
+        AbstractComponent abstractComponent = context.getComponent("aComponent");
+        Assertions.assertNotNull(abstractComponent);
         AComponent aComponent = context.getComponent("aComponent");
-        BComponent bComponent = context.getComponent("bComponent");
         Assertions.assertNotNull(aComponent);
+        Assertions.assertEquals(aComponent, abstractComponent);
+
+        BComponent bComponent = context.getComponent("bComponent");
         Assertions.assertNotNull(bComponent);
-        Assertions.assertEquals(bComponent, aComponent.bComponent);
+        Assertions.assertEquals(aComponent, bComponent.aComponent);
     }
 }

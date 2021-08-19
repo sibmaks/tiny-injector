@@ -29,7 +29,7 @@ public class Injector {
 
     }
 
-    public static IContext buildInjections(ClassLoader classLoader, Set<String> scanPackages) throws Exception {
+    public static IContext buildInjections(ClassLoader classLoader, Set<String> scanPackages) throws Throwable {
         log.debug("Search components");
         Map<String, Class<? super Object>> globalComponents = findComponents(classLoader, scanPackages);
         log.debug("Components found");
@@ -46,7 +46,7 @@ public class Injector {
     }
 
     private static void doInjections(Map<String, Class<? super Object>> globalComponents, IContext context)
-            throws IllegalAccessException, InvocationTargetException {
+            throws IllegalAccessException {
         for (Map.Entry<String, Class<? super Object>> entry : globalComponents.entrySet()) {
             ComponentDefinition<?> sourceComponent = context.getComponentDefinition(entry.getKey());
             doFieldInjection(context, entry, sourceComponent);
@@ -122,7 +122,7 @@ public class Injector {
         }
     }
 
-    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents) throws Exception {
+    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents) throws Throwable {
         IMutableContext context = new HashMapContext();
         try {
             for (Map.Entry<String, Class<? super Object>> entry : globalComponents.entrySet()) {
@@ -130,10 +130,11 @@ public class Injector {
                 constructor.setAccessible(true);
                 Object instance = constructor.newInstance();
                 constructor.setAccessible(false);
-                if (!context.add(entry.getKey(), entry.getValue(), instance)) {
-                    throw new IllegalStateException(String.format("Duplicates component name: %s", entry.getKey()));
-                }
+                context.add(entry.getKey(), entry.getValue(), instance);
             }
+        } catch (InvocationTargetException e) {
+            context.clear();
+            throw e.getCause();
         } catch (Throwable throwable) {
             context.clear();
             throw throwable;
@@ -148,12 +149,6 @@ public class Injector {
         for (String scanPackage : scanPackages) {
             Map<String, Class<?>> components = ReflectionUtils.findComponents(classLoader, scanPackage);
             for (Map.Entry<String, Class<?>> entry : components.entrySet()) {
-                if (entry.getValue().isInterface()) {
-                    throw new IllegalStateException(String.format("Interface %s hasn't implementation", entry.getValue().getName()));
-                }
-                if (Modifier.isAbstract(entry.getValue().getModifiers())) {
-                    throw new IllegalStateException(String.format("Abstract class %s hasn't implementation", entry.getValue().getName()));
-                }
                 if (globalComponents.putIfAbsent(entry.getKey(), (Class<? super Object>) entry.getValue()) != null) {
                     throw new IllegalStateException(
                             String.format("Duplicates component name: %s in different packages (%s, %s)",
@@ -165,12 +160,12 @@ public class Injector {
         return globalComponents;
     }
 
-    public static IContext buildInjections(Set<String> scanPackages) throws Exception {
+    public static IContext buildInjections(Set<String> scanPackages) throws Throwable {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         return buildInjections(classLoader, scanPackages);
     }
 
-    public static IContext buildInjections(String ... scanPackages) throws Exception {
+    public static IContext buildInjections(String ... scanPackages) throws Throwable {
         Set<String> packages = new HashSet<>(Arrays.asList(scanPackages));
         return buildInjections(packages);
     }

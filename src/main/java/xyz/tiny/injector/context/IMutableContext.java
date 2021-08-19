@@ -8,7 +8,7 @@ package xyz.tiny.injector.context;
  */
 public interface IMutableContext extends IContext {
 
-    <T> boolean add(String name, Class<T> clazz, T component);
+    <T> void add(String name, Class<T> clazz, T component);
 
     void clear();
 }

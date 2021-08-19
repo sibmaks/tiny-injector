@@ -20,9 +20,8 @@ class HashMapContext implements IMutableContext {
     }
 
     @Override
-    public boolean add(String name, Class clazz, Object component) {
-        Object wasValue = components.putIfAbsent(name, new ComponentDefinition<>(name, clazz, component));
-        return wasValue == null;
+    public void add(String name, Class clazz, Object component) {
+        components.putIfAbsent(name, new ComponentDefinition<>(name, clazz, component));
     }
 
     @Override

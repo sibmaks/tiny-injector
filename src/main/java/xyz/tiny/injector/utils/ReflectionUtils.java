@@ -11,8 +11,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Reflections utils for getting class in packages, get class annotations and so on.
@@ -33,42 +34,49 @@ public class ReflectionUtils {
         Set<Class<?>> classes = getClasses(classLoader, packageName, aClass -> getAnnotations(aClass).stream()
                 .anyMatch(it -> it.annotationType() == Component.class));
 
+        Set<Class<?>> abstractClasses = new HashSet<>();
+        Set<Class<?>> implClasses = new HashSet<>();
         for(Class<?> clazz : classes) {
             String name = getComponentName(clazz);
-            if("".equals(name)) {
+            if ("".equals(name)) {
                 name = StringUtils.toLowerCase1st(clazz.getSimpleName());
             }
-            Class<?> aClass = components.get(name);
-            if(aClass != null) {
-                if((aClass.isInterface() || Modifier.isAbstract(aClass.getModifiers())) && aClass.isAssignableFrom(clazz)) {
-                    components.put(name, clazz);
-                } else if ((!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers())) || !clazz.isAssignableFrom(aClass)) {
-                    throw new IllegalStateException(String.format("Duplicate component name: %s for classes: %s, %s",
-                            name, aClass.getName(), clazz.getName()));
+            if(clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) {
+                if(implClasses.stream().noneMatch(clazz::isAssignableFrom)) {
+                    abstractClasses.add(clazz);
                 }
             } else {
-                components.put(name, clazz);
+                Class<?> aClass = components.get(name);
+                if (aClass != null) {
+                    throw new IllegalStateException(String.format("Duplicate component name: %s, classes: %s, %s",
+                            name, aClass.getName(), clazz.getName()));
+                } else {
+                    components.put(name, clazz);
+                    implClasses.add(clazz);
+                    abstractClasses.removeAll(abstractClasses.stream()
+                            .filter(it -> it.isAssignableFrom(clazz))
+                            .collect(Collectors.toSet()));
+                }
             }
+        }
+        implClasses.clear();
+        if(!abstractClasses.isEmpty()) {
+            throw new IllegalStateException(String.format("Component without implementation: %s", abstractClasses));
         }
         return components;
     }
 
     private static String getComponentName(Class<?> clazz) {
         List<Annotation> annotations = getAnnotations(clazz);
-        for(int i = annotations.size() - 1; i >= 0; i--) {
-            Annotation annotation = annotations.get(i);
+        for(Annotation annotation : annotations) {
             if(annotation.annotationType() == Component.class) {
                 return ((Component) annotation).value();
             }
         }
-        return "";
+        throw new IllegalStateException(String.format("Class %s is not component", clazz.getName()));
     }
 
     private static List<Annotation> getAnnotations(Annotation annotation) {
-        Annotation[] annotations = annotation.annotationType().getDeclaredAnnotations();
-        if(annotations.length == 0) {
-            return Collections.emptyList();
-        }
         List<Annotation> subAnnotations = new ArrayList<>();
         getAnnotations(annotation, subAnnotations);
         return subAnnotations;
@@ -126,13 +134,16 @@ public class ReflectionUtils {
                 log.trace("Class {} not contains annotations", it);
             }
 
+            Collections.reverse(annotations);
             return annotations;
         });
     }
 
     private static Set<Class<?>> getClasses(ClassLoader classLoader, String packageName, Predicate<Class<?>> condition)
             throws IOException {
-        assert classLoader != null;
+        if(classLoader == null) {
+            throw new IllegalArgumentException("Class loader can't be null");
+        }
         String path = packageName.replace('.', '/');
         Enumeration<URL> resources = classLoader.getResources(path);
         List<File> dirs = new ArrayList<>();
@@ -183,7 +194,7 @@ public class ReflectionUtils {
      * @return set of fields or empty set
      */
     public static Set<Field> getFields(Class<?> clazz) {
-        if(clazz == null || clazz == Object.class) {
+        if(clazz == null) {
             return Collections.emptySet();
         }
         Set<Field> fields = new HashSet<>(Arrays.asList(clazz.getDeclaredFields()));
@@ -198,7 +209,7 @@ public class ReflectionUtils {
      * @return set of methods or empty set
      */
     public static Set<Method> getMethods(Class<?> clazz) {
-        if(clazz == null || clazz == Object.class) {
+        if(clazz == null) {
             return Collections.emptySet();
         }
         Set<Method> methods = new HashSet<>(Arrays.asList(clazz.getDeclaredMethods()));
@@ -221,7 +232,8 @@ public class ReflectionUtils {
         if(superclass != null && superclass != Object.class) {
             for (Method declaredMethod : superclass.getDeclaredMethods()) {
                 if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
-                        declaredMethod.getName().equals(method.getName()) && Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
+                        declaredMethod.getName().equals(method.getName()) &&
+                        Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
                     annotations.addAll(getMethodAnnotations(superclass, declaredMethod));
                     break;
                 }
@@ -230,8 +242,10 @@ public class ReflectionUtils {
 
         for (Class<?> anInterface : clazz.getInterfaces()) {
             for (Method declaredMethod : anInterface.getDeclaredMethods()) {
+                // Private check for Java 9+
                 if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
-                        declaredMethod.getName().equals(method.getName()) && Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
+                        declaredMethod.getName().equals(method.getName()) &&
+                        Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
                     annotations.addAll(getMethodAnnotations(anInterface, declaredMethod));
                     break;
                 }
@@ -251,17 +265,9 @@ public class ReflectionUtils {
         Class<?> superclass = clazz.getSuperclass();
         if(superclass != null && superclass != Object.class) {
             for (Field declaredField : superclass.getDeclaredFields()) {
-                if(!Modifier.isPrivate(declaredField.getModifiers()) && declaredField.getName().equals(field.getName())) {
+                if(!Modifier.isPrivate(declaredField.getModifiers()) &&
+                        declaredField.getName().equals(field.getName())) {
                     annotations.addAll(getFieldAnnotations(superclass, declaredField));
-                    break;
-                }
-            }
-        }
-
-        for (Class<?> anInterface : clazz.getInterfaces()) {
-            for (Field declaredField : anInterface.getDeclaredFields()) {
-                if(!Modifier.isPrivate(declaredField.getModifiers()) && declaredField.getName().equals(field.getName())) {
-                    annotations.addAll(getFieldAnnotations(anInterface, declaredField));
                     break;
                 }
             }

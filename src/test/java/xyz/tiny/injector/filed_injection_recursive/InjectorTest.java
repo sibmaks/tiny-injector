@@ -12,7 +12,7 @@ import xyz.tiny.injector.context.IContext;
 class InjectorTest {
 
     @Test
-    void recursiveInjections() throws Exception {
+    void recursiveInjections() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         ARecursiveComponent aComponent = context.getComponent("aComponent");
         BRecursiveComponent bComponent = context.getComponent("bComponent");

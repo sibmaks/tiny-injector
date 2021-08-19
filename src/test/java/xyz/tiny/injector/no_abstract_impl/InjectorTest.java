@@ -14,7 +14,7 @@ class InjectorTest {
      * IllegalStateException excepted in case of @Component abstract class is not implemented
      */
     @Test
-    void noInterfaceImplementation() {
+    void noAbstractImplementation() {
         Assertions.assertThrows(IllegalStateException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
     }
 }
