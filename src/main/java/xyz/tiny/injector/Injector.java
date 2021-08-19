@@ -10,11 +10,13 @@ import xyz.tiny.injector.utils.StringUtils;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Class provided injections feature
@@ -34,8 +36,12 @@ public class Injector {
         Map<String, Class<? super Object>> globalComponents = findComponents(classLoader, scanPackages);
         log.debug("Components found");
 
+        log.debug("Search providers");
+        List<Provider<?>> providers = findProviders(globalComponents);
+        log.debug("Providers found");
+
         log.debug("Build context");
-        IContext context = buildContext(globalComponents);
+        IContext context = buildContext(globalComponents, providers);
         log.debug("Context built");
 
         log.debug("Start injection");
@@ -43,6 +49,25 @@ public class Injector {
         log.debug("Injection finished");
 
         return context;
+    }
+
+    private static List<Provider<?>> findProviders(Map<String, Class<? super Object>> globalComponents) throws Throwable {
+        List<Class<? super Object>> providerClasses = globalComponents.values().stream()
+                .filter(Provider.class::isAssignableFrom)
+                .collect(Collectors.toList());
+        List<Provider<?>> providers = new ArrayList<>();
+        try {
+            for (Class<? super Object> providerClass : providerClasses) {
+                Constructor<? super Object> constructor = providerClass.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                Object instance = constructor.newInstance();
+                constructor.setAccessible(false);
+                providers.add((Provider<?>) instance);
+            }
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
+        return providers;
     }
 
     private static void doInjections(Map<String, Class<? super Object>> globalComponents, IContext context)
@@ -122,16 +147,12 @@ public class Injector {
         }
     }
 
-    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents) throws Throwable {
+    private static IMutableContext buildContext(Map<String, Class<? super Object>> globalComponents,
+                                                List<Provider<?>> providers) throws Throwable {
         IMutableContext context = new HashMapContext();
         try {
-            for (Map.Entry<String, Class<? super Object>> entry : globalComponents.entrySet()) {
-                Constructor<? super Object> constructor = entry.getValue().getDeclaredConstructor();
-                constructor.setAccessible(true);
-                Object instance = constructor.newInstance();
-                constructor.setAccessible(false);
-                context.add(entry.getKey(), entry.getValue(), instance);
-            }
+            initComponents(globalComponents, context);
+            initProvidedComponents(providers, context);
         } catch (InvocationTargetException e) {
             context.clear();
             throw e.getCause();
@@ -141,6 +162,45 @@ public class Injector {
         }
         Runtime.getRuntime().addShutdownHook(new Thread(context::clear));
         return context;
+    }
+
+    private static void initComponents(Map<String, Class<? super Object>> globalComponents, IMutableContext context)
+            throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+        for (Map.Entry<String, Class<? super Object>> entry : globalComponents.entrySet()) {
+            Constructor<? super Object> constructor = entry.getValue().getDeclaredConstructor();
+            constructor.setAccessible(true);
+            Object instance = constructor.newInstance();
+            constructor.setAccessible(false);
+            context.add(entry.getKey(), entry.getValue(), instance);
+        }
+    }
+
+    private static void initProvidedComponents(List<Provider<?>> providers, IMutableContext context) throws NoSuchMethodException {
+        for (Provider<?> provider : providers) {
+            Class<? extends Provider> providerClass = provider.getClass();
+            Method getMethod = providerClass.getDeclaredMethod("get");
+            List<Annotation> annotations = ReflectionUtils.getMethodAnnotations(providerClass, getMethod);
+
+            Named named = (Named) annotations.stream()
+                    .filter(it -> it.annotationType() == Named.class)
+                    .findFirst().orElse(null);
+
+            Class methodReturnType = getMethod.getReturnType();
+
+            String componentName = StringUtils.toLowerCase1st(methodReturnType.getSimpleName());
+            if (named != null && !"".equals(named.value())) {
+                componentName = named.value();
+            }
+
+            Object existingComponent = context.getComponent(componentName);
+            if(existingComponent != null) {
+                throw new IllegalStateException(String.format("Provider %s override existing component %s",
+                        providerClass.getName(), componentName));
+            }
+
+            Object component = provider.get();
+            context.add(componentName, methodReturnType, component);
+        }
     }
 
     private static Map<String, Class<? super Object>> findComponents(ClassLoader classLoader, Set<String> scanPackages)
