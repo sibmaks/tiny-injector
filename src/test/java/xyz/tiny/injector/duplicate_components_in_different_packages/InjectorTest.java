@@ -15,6 +15,9 @@ class InjectorTest {
      */
     @Test
     void duplicateComponentsInjection() {
-        Assertions.assertThrows(IllegalStateException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
+        String name = InjectorTest.class.getPackage().getName();
+        Assertions.assertThrows(IllegalStateException.class, () -> Injector.buildInjections(
+                name + ".a", name + ".b"
+        ));
     }
 }

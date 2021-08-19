@@ -16,7 +16,7 @@ class InjectorTest {
      * @throws Exception
      */
     @Test
-    void interfaceInheritance() throws Exception {
+    void interfaceInheritance() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         BaseInterface baseInterface = context.getComponent("interface");
         InterfaceImpl anInterface = context.getComponent("interface");

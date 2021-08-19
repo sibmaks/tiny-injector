@@ -12,7 +12,7 @@ import xyz.tiny.injector.context.IContext;
 class InjectorTest {
 
     @Test
-    void modifedComponentNameInjection() throws Exception {
+    void modifiedComponentNameInjection() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = context.getComponent("aComponent");
         BComponent bComponent = context.getComponent("cComponent");
