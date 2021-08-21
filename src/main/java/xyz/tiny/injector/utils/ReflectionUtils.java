@@ -2,17 +2,16 @@ package xyz.tiny.injector.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import xyz.tiny.injector.annotation.Component;
+import xyz.tiny.injector.reflection.AnnotationInfo;
+import xyz.tiny.injector.reflection.ClassInfo;
+import xyz.tiny.injector.reflection.FieldInfo;
+import xyz.tiny.injector.reflection.MethodInfo;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -24,31 +23,28 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class ReflectionUtils {
-    private static final Map<Class<?>, List<Annotation>> annotationsCache = new ConcurrentHashMap<>();
-    private static final ReentrantLock annotationCacheLock = new ReentrantLock();
-
     private ReflectionUtils() {
 
     }
 
-    public static Map<String, Class<?>> findComponents(ClassLoader classLoader, String packageName) throws IOException {
-        Map<String, Class<?>> components = new HashMap<>();
-        Set<Class<?>> classes = getClasses(classLoader, packageName, aClass -> canBeComponent(aClass) &&
-                getAnnotations(aClass).stream().anyMatch(it -> it.annotationType() == Component.class));
+    public static Map<String, ClassInfo<? super Object>> findComponents(ClassLoader classLoader, String packageName) throws IOException {
+        Map<String, ClassInfo<? super Object>> components = new HashMap<>();
+        Set<ClassInfo<? super Object>> classes = getClasses(classLoader, packageName, aClass -> canBeComponent(aClass) &&
+                aClass.getAnnotationInfos().stream().anyMatch(it -> it.isInherited(Component.class)));
 
-        Set<Class<?>> abstractClasses = new HashSet<>();
-        Set<Class<?>> implClasses = new HashSet<>();
-        for(Class<?> clazz : classes) {
+        Set<ClassInfo<? super Object>> abstractClasses = new HashSet<>();
+        Set<ClassInfo<? super Object>> implClasses = new HashSet<>();
+        for(ClassInfo<? super Object> clazz : classes) {
             String name = getComponentName(clazz);
             if ("".equals(name)) {
                 name = StringUtils.toLowerCase1st(clazz.getSimpleName());
             }
-            if(clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) {
+            if(clazz.isInterface() || clazz.isAbstract()) {
                 if(implClasses.stream().noneMatch(clazz::isAssignableFrom)) {
                     abstractClasses.add(clazz);
                 }
             } else {
-                Class<?> aClass = components.get(name);
+                ClassInfo<? super Object> aClass = components.get(name);
                 if (aClass != null) {
                     throw new IllegalStateException(String.format("Duplicate component name: %s, classes: %s, %s",
                             name, aClass.getName(), clazz.getName()));
@@ -68,98 +64,25 @@ public class ReflectionUtils {
         return components;
     }
 
-    private static boolean canBeComponent(Class<?> clazz) {
+    private static boolean canBeComponent(ClassInfo<?> classInfo) {
+        Class<?> clazz = classInfo.get();
         return !clazz.isAnnotation() && !clazz.isAnonymousClass() && !clazz.isPrimitive() && !clazz.isSynthetic() &&
                 !clazz.isEnum() && !clazz.isArray();
     }
 
-    private static String getComponentName(Class<?> clazz) {
-        List<Annotation> annotations = getAnnotations(clazz);
-        for(Annotation annotation : annotations) {
-            if(annotation.annotationType() == Component.class) {
+    private static String getComponentName(ClassInfo<?> clazz) {
+        for(AnnotationInfo annotationInfo : clazz.getAnnotationInfos()) {
+            AnnotationInfo componentAI = annotationInfo.getInherited(Component.class);
+            if(componentAI != null) {
+                Annotation annotation = componentAI.getAnnotation();
                 return ((Component) annotation).value();
             }
         }
         throw new IllegalStateException(String.format("Class %s is not component", clazz.getName()));
     }
 
-    private static List<Annotation> getAnnotations(Annotation annotation) {
-        List<Annotation> subAnnotations = new ArrayList<>();
-        getAnnotations(annotation, subAnnotations);
-        return subAnnotations;
-    }
-
-    private static void getAnnotations(Annotation annotation, List<Annotation> result) {
-        Annotation[] annotations = annotation.annotationType().getDeclaredAnnotations();
-        if(annotations.length == 0) {
-            return;
-        }
-        for (Annotation subAnnotation : annotations) {
-            if(!result.contains(subAnnotation)) {
-                result.add(subAnnotation);
-                getAnnotations(subAnnotation, result);
-                result.remove(subAnnotation);
-                result.add(subAnnotation);
-            }
-        }
-    }
-
-    private static List<Annotation> getAnnotations(Class<?> clazz) {
-        if (clazz == null) {
-            throw new IllegalArgumentException("Class can't be null");
-        }
-        if (clazz == Object.class) {
-            return Collections.emptyList();
-        }
-        List<Annotation> annotations = annotationsCache.get(clazz);
-        if (annotations != null) {
-            return annotations;
-        }
-        try {
-            annotationCacheLock.lock();
-
-            annotations = annotationsCache.get(clazz);
-            if (annotations != null) {
-                return annotations;
-            }
-
-            annotations = new ArrayList<>();
-
-            for (Class<?> anInterface : clazz.getInterfaces()) {
-                for (Annotation annotation : getAnnotations(anInterface)) {
-                    annotations.addAll(getAnnotations(annotation));
-                    annotations.add(annotation);
-                }
-            }
-
-            Class<?> superclass = clazz.getSuperclass();
-            if (superclass != null) {
-                for (Annotation annotation : getAnnotations(superclass)) {
-                    annotations.addAll(getAnnotations(annotation));
-                    annotations.add(annotation);
-                }
-            }
-
-            for (Annotation annotation : clazz.getDeclaredAnnotations()) {
-                annotations.addAll(getAnnotations(annotation));
-                annotations.add(annotation);
-            }
-
-            if (!annotations.isEmpty()) {
-                log.trace("Class {} contains annotations: {}", clazz, annotations);
-            } else {
-                log.trace("Class {} not contains annotations", clazz);
-            }
-
-            Collections.reverse(annotations);
-            annotationsCache.put(clazz, annotations);
-            return annotations;
-        } finally {
-            annotationCacheLock.unlock();
-        }
-    }
-
-    private static Set<Class<?>> getClasses(ClassLoader classLoader, String packageName, Predicate<Class<?>> condition)
+    private static Set<ClassInfo<? super Object>> getClasses(ClassLoader classLoader, String packageName,
+                                                             Predicate<ClassInfo<? super Object>> condition)
             throws IOException {
         if(classLoader == null) {
             throw new IllegalArgumentException("Class loader can't be null");
@@ -171,20 +94,21 @@ public class ReflectionUtils {
             URL resource = resources.nextElement();
             dirs.add(new File(resource.getFile()));
         }
-        Set<Class<?>> classes = new HashSet<>();
+        Set<ClassInfo<? super Object>> classes = new HashSet<>();
         for (File directory : dirs) {
             classes.addAll(findClasses(directory, packageName, condition));
         }
         return classes;
     }
 
-    private static Set<Class<?>> findClasses(File directory, String packageName, Predicate<Class<?>> condition) {
+    private static Set<ClassInfo<? super Object>> findClasses(File directory, String packageName,
+                                                              Predicate<ClassInfo<? super Object>> condition) {
         if (!directory.exists()) {
             return Collections.emptySet();
         }
         File[] files = directory.listFiles();
         if(files != null) {
-            Set<Class<?>> classes = new HashSet<>();
+            Set<ClassInfo<? super Object>> classes = new HashSet<>();
             for (File file : files) {
                 if (file.isDirectory()) {
                     if(!file.getName().contains(".'")) {
@@ -192,9 +116,11 @@ public class ReflectionUtils {
                     }
                 } else if (file.getName().endsWith(".class")) {
                     try {
-                        Class<?> clazz = Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6));
-                        if(condition.test(clazz)) {
-                            classes.add(clazz);
+                        Class<? super Object> clazz = (Class<? super Object>) Class.forName(packageName + '.' +
+                                file.getName().substring(0, file.getName().length() - 6));
+                        ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                        if(condition.test(classInfo)) {
+                            classes.add(classInfo);
                         }
                     } catch (ClassNotFoundException e) {
                         log.error(e.getMessage(), e);
@@ -213,11 +139,14 @@ public class ReflectionUtils {
      * @param clazz some Java class
      * @return set of fields or empty set
      */
-    public static Set<Field> getFields(Class<?> clazz) {
+    public static Set<FieldInfo> getFields(Class<?> clazz) {
         if(clazz == null) {
             return Collections.emptySet();
         }
-        Set<Field> fields = new HashSet<>(Arrays.asList(clazz.getDeclaredFields()));
+        Set<FieldInfo> fields = Arrays
+                .stream(clazz.getDeclaredFields())
+                .map(it -> new FieldInfo(it, AnnotationInfo.forField(it)))
+                .collect(Collectors.toSet());
         fields.addAll(getFields(clazz.getSuperclass()));
         return fields;
     }
@@ -228,73 +157,19 @@ public class ReflectionUtils {
      * @param clazz some Java class
      * @return set of methods or empty set
      */
-    public static Set<Method> getMethods(Class<?> clazz) {
+    public static Set<MethodInfo> getMethods(Class<?> clazz) {
         if(clazz == null) {
             return Collections.emptySet();
         }
-        Set<Method> methods = new HashSet<>(Arrays.asList(clazz.getDeclaredMethods()));
-        for (Method method : getMethods(clazz.getSuperclass())) {
-            if(Modifier.isPrivate(method.getModifiers()) || methods.stream()
-                    .noneMatch(it -> it.getName().equals(method.getName()) &&
-                            Arrays.equals(it.getParameterTypes(), method.getParameterTypes()))) {
+        Set<MethodInfo> methods = Arrays.stream(clazz.getDeclaredMethods())
+                .filter(it -> !it.isSynthetic() && !it.isBridge())
+                .map(it -> new MethodInfo(it, AnnotationInfo.forMethod(it)))
+                .collect(Collectors.toSet());
+        for (MethodInfo method : getMethods(clazz.getSuperclass())) {
+            if(method.isPrivate() || !method.isBridge() && !method.isSynthetic() && methods.stream().noneMatch(it -> it.same(method))) {
                 methods.add(method);
             }
         }
         return methods;
-    }
-
-    public static List<Annotation> getMethodAnnotations(Class<?> clazz, Method method) {
-        if(clazz == null || clazz == Object.class) {
-            return Collections.emptyList();
-        }
-        List<Annotation> annotations = new ArrayList<>();
-        Class<?> superclass = clazz.getSuperclass();
-        if(superclass != null && superclass != Object.class) {
-            for (Method declaredMethod : superclass.getDeclaredMethods()) {
-                if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
-                        declaredMethod.getName().equals(method.getName()) &&
-                        Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
-                    annotations.addAll(getMethodAnnotations(superclass, declaredMethod));
-                    break;
-                }
-            }
-        }
-
-        for (Class<?> anInterface : clazz.getInterfaces()) {
-            for (Method declaredMethod : anInterface.getDeclaredMethods()) {
-                // Private check for Java 9+
-                if(!Modifier.isPrivate(declaredMethod.getModifiers()) &&
-                        declaredMethod.getName().equals(method.getName()) &&
-                        Arrays.equals(declaredMethod.getParameterTypes(), method.getParameterTypes())) {
-                    annotations.addAll(getMethodAnnotations(anInterface, declaredMethod));
-                    break;
-                }
-            }
-        }
-
-        annotations.addAll(Arrays.asList(method.getDeclaredAnnotations()));
-        Collections.reverse(annotations);
-        return annotations;
-    }
-
-    public static List<Annotation> getFieldAnnotations(Class<?> clazz, Field field) {
-        if(clazz == null || clazz == Object.class) {
-            return Collections.emptyList();
-        }
-        List<Annotation> annotations = new ArrayList<>();
-        Class<?> superclass = clazz.getSuperclass();
-        if(superclass != null && superclass != Object.class) {
-            for (Field declaredField : superclass.getDeclaredFields()) {
-                if(!Modifier.isPrivate(declaredField.getModifiers()) &&
-                        declaredField.getName().equals(field.getName())) {
-                    annotations.addAll(getFieldAnnotations(superclass, declaredField));
-                    break;
-                }
-            }
-        }
-
-        annotations.addAll(Arrays.asList(field.getDeclaredAnnotations()));
-        Collections.reverse(annotations);
-        return annotations;
     }
 }

@@ -12,7 +12,7 @@ import xyz.tiny.injector.context.IContext;
 class InjectorTest {
 
     @Test
-    void methodInjections() throws Throwable {
+    void methodInjectionsSaveAnnotationsFromClassParent() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AbstractComponent component = context.getComponent("aComponent");
         Assertions.assertNotNull(component);
