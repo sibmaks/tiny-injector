@@ -12,6 +12,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ReflectionUtils {
     private static final Map<Class<?>, List<Annotation>> annotationsCache = new ConcurrentHashMap<>();
+    private static final ReentrantLock annotationCacheLock = new ReentrantLock();
 
     private ReflectionUtils() {
 
@@ -31,8 +33,8 @@ public class ReflectionUtils {
 
     public static Map<String, Class<?>> findComponents(ClassLoader classLoader, String packageName) throws IOException {
         Map<String, Class<?>> components = new HashMap<>();
-        Set<Class<?>> classes = getClasses(classLoader, packageName, aClass -> getAnnotations(aClass).stream()
-                .anyMatch(it -> it.annotationType() == Component.class));
+        Set<Class<?>> classes = getClasses(classLoader, packageName, aClass -> canBeComponent(aClass) &&
+                getAnnotations(aClass).stream().anyMatch(it -> it.annotationType() == Component.class));
 
         Set<Class<?>> abstractClasses = new HashSet<>();
         Set<Class<?>> implClasses = new HashSet<>();
@@ -64,6 +66,11 @@ public class ReflectionUtils {
             throw new IllegalStateException(String.format("Component without implementation: %s", abstractClasses));
         }
         return components;
+    }
+
+    private static boolean canBeComponent(Class<?> clazz) {
+        return !clazz.isAnnotation() && !clazz.isAnonymousClass() && !clazz.isPrimitive() && !clazz.isSynthetic() &&
+                !clazz.isEnum() && !clazz.isArray();
     }
 
     private static String getComponentName(Class<?> clazz) {
@@ -98,24 +105,34 @@ public class ReflectionUtils {
     }
 
     private static List<Annotation> getAnnotations(Class<?> clazz) {
-        if(clazz == null) {
+        if (clazz == null) {
             throw new IllegalArgumentException("Class can't be null");
         }
-        return annotationsCache.computeIfAbsent(clazz, it -> {
-            if (it == Object.class) {
-                return Collections.emptyList();
+        if (clazz == Object.class) {
+            return Collections.emptyList();
+        }
+        List<Annotation> annotations = annotationsCache.get(clazz);
+        if (annotations != null) {
+            return annotations;
+        }
+        try {
+            annotationCacheLock.lock();
+
+            annotations = annotationsCache.get(clazz);
+            if (annotations != null) {
+                return annotations;
             }
 
-            List<Annotation> annotations = new ArrayList<>();
+            annotations = new ArrayList<>();
 
-            for (Class<?> anInterface : it.getInterfaces()) {
+            for (Class<?> anInterface : clazz.getInterfaces()) {
                 for (Annotation annotation : getAnnotations(anInterface)) {
                     annotations.addAll(getAnnotations(annotation));
                     annotations.add(annotation);
                 }
             }
 
-            Class<?> superclass = it.getSuperclass();
+            Class<?> superclass = clazz.getSuperclass();
             if (superclass != null) {
                 for (Annotation annotation : getAnnotations(superclass)) {
                     annotations.addAll(getAnnotations(annotation));
@@ -123,20 +140,23 @@ public class ReflectionUtils {
                 }
             }
 
-            for (Annotation annotation : it.getDeclaredAnnotations()) {
+            for (Annotation annotation : clazz.getDeclaredAnnotations()) {
                 annotations.addAll(getAnnotations(annotation));
                 annotations.add(annotation);
             }
 
             if (!annotations.isEmpty()) {
-                log.trace("Class {} contains annotations: {}", it, annotations);
+                log.trace("Class {} contains annotations: {}", clazz, annotations);
             } else {
-                log.trace("Class {} not contains annotations", it);
+                log.trace("Class {} not contains annotations", clazz);
             }
 
             Collections.reverse(annotations);
+            annotationsCache.put(clazz, annotations);
             return annotations;
-        });
+        } finally {
+            annotationCacheLock.unlock();
+        }
     }
 
     private static Set<Class<?>> getClasses(ClassLoader classLoader, String packageName, Predicate<Class<?>> condition)
