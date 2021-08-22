@@ -1,6 +1,6 @@
 # Tiny Injector
 
-Simple Java dependecy injection library
+Simple Java dependency injection library
 
 Actually, this is an educational project, so if you want to use it anywhere think before twice.
 
@@ -13,7 +13,7 @@ Support:
 - provided values
 - component customization (for example proxy)
 
-# Dependecies
+# Dependencies
 
 Library targeted to minimal using of external dependencies, so this library depends only on **javax.inject** library and also use **slf4j** for logging.
 
@@ -21,12 +21,14 @@ For code generation used **Lombok**.
 
 # Using example
 
-Any class what has to be processed by library should be annotatted by this annotation:
+Any class what has to be processed by library should be annotated by this annotation:
 ```java
 xyz.tiny.injector.annotation.Component
 ```
 
-To execute injection you should call any of `buildInjections` methods in `xyz.tiny.injector.Injector` By defauly injector used class loader of current thread.
+To execute injection you should call any of `buildInjections` methods in `xyz.tiny.injector.Injector`. 
+
+By default, injector used class loader of current thread.
 
 The return type is `IContext` interface, which contains all created components and their definitions.
 
@@ -119,6 +121,10 @@ public class SomeComponent {
     }
 }
 ```
+
+## Using providers
+
+Example can be found here: [provider test](https://github.com/sibmaks/tiny-injector/tree/main/src/test/java/xyz/tiny/injector/provide_component).
 
 ## Component customization (for example proxy)
 
