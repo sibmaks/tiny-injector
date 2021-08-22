@@ -8,7 +8,8 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Annotations should be used to mark class as component, for turing on injection feature
+ * Annotations should be used to mark class as component, for turing on injection feature.
+ * Also, this annotation can be used for turing on implementation of {@code xyz.tiny.injector.context.listener.IContextListener}
  *
  * @author drobyshev-ma
  * Created at 18-08-2021
