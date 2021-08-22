@@ -13,21 +13,6 @@ import xyz.tiny.injector.context.IContext;
 class InjectorTest {
 
     @Test
-    void componentDefinitionMarkIsSet() throws Throwable {
-        IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
-
-        ComponentDefinition<AComponent> componentDefinition = context.getComponentDefinition("aComponent");
-
-        Assertions.assertTrue(componentDefinition.mark("mark1"));
-        Assertions.assertFalse(componentDefinition.mark("mark1"));
-        Assertions.assertTrue(componentDefinition.mark("mark2"));
-
-        Assertions.assertTrue(componentDefinition.isMarked("mark1"));
-        Assertions.assertTrue(componentDefinition.isMarked("mark2"));
-        Assertions.assertFalse(componentDefinition.isMarked("mark3"));
-    }
-
-    @Test
     void componentDefinitionCustomizedBeansRejected() throws Throwable {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
 

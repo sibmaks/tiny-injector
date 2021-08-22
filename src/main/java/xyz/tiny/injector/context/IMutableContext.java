@@ -14,5 +14,7 @@ public interface IMutableContext extends IContext {
 
     <T> void update(String name, T newInstance) throws Exception;
 
+    <T> void addMark(String name, Object mark) throws Exception;
+
     void clear();
 }

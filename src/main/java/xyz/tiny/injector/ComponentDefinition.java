@@ -25,10 +25,8 @@ public class ComponentDefinition<T> {
     @Getter
     private T componentInstance;
     private final Set<Object> marks;
-    private final IComponentDefinitionObserver componentDefinitionObserver;
 
-    public ComponentDefinition(String name, ClassInfo<T> componentClass, T componentBaseInstance,
-                               IComponentDefinitionObserver componentDefinitionObserver) {
+    public ComponentDefinition(String name, ClassInfo<T> componentClass, T componentBaseInstance) {
         Objects.requireNonNull(name, "Component name can't be null");
         Objects.requireNonNull(componentClass, "Component class can't be null");
         Objects.requireNonNull(componentBaseInstance, "Component instance can't be null");
@@ -36,7 +34,6 @@ public class ComponentDefinition<T> {
         this.componentClass = componentClass;
         this.componentBaseInstance = componentBaseInstance;
         this.componentInstance = componentBaseInstance;
-        this.componentDefinitionObserver = componentDefinitionObserver;
         this.marks = new HashSet<>();
     }
 
@@ -45,21 +42,25 @@ public class ComponentDefinition<T> {
      * Return false in case if passed mark already exists
      * @param mark some not null mark
      * @return added or not
-     * @throws Exception
      */
-    public boolean mark(Object mark) throws Exception {
+    boolean mark(Object mark) {
         Objects.requireNonNull(mark, "Mark can't be null");
-        if(this.marks.add(mark) && componentDefinitionObserver != null) {
-            componentDefinitionObserver.onMarkAdded(this);
-            return true;
-        }
-        return false;
+        return this.marks.add(mark);
     }
 
+    /**
+     * Change component current instance
+     * @param componentInstance new instance
+     */
     void setComponentInstance(T componentInstance) {
         this.componentInstance = componentInstance;
     }
 
+    /**
+     * Check is component definition has all passed marks or not
+     * @param marks list of marks
+     * @return true if contains all marks, false otherwise
+     */
     public boolean isMarked(Object ... marks) {
         for (Object mark : marks) {
             if(!this.marks.contains(mark)) {

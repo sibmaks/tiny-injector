@@ -46,7 +46,7 @@ public class MethodInjector implements IContextListener {
     public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context)
             throws Exception {
         doComponentInjections(componentDefinition, context);
-        doPendingInjections(componentDefinition);
+        doPendingInjections(componentDefinition, context);
     }
 
     private void doComponentInjections(ComponentDefinition<?> componentDefinition, IMutableContext context)
@@ -87,11 +87,11 @@ public class MethodInjector implements IContextListener {
             methodInfo.invoke(componentDefinition.getComponentBaseInstance(), component);
         }
         if(fullyInjected) {
-            componentDefinition.mark(MethodInjector.class);
+            context.addMark(componentDefinition.getName(), MethodInjector.class);
         }
     }
 
-    private void doPendingInjections(ComponentDefinition<?> componentDefinition) throws Exception {
+    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
         String name = componentDefinition.getName();
         Set<ComponentDefinition<?>> definitions = requiredComponents.get(name);
         if(definitions == null) {
@@ -108,7 +108,7 @@ public class MethodInjector implements IContextListener {
             pendingInjections.get(definition).removeAll(fields);
             if(pendingInjections.get(definition).isEmpty()) {
                 pendingInjections.remove(definition);
-                definition.mark(MethodInjector.class);
+                context.addMark(definition.getName(), MethodInjector.class);
             }
         }
         requiredComponents.remove(name);

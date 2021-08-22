@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author drobyshev-ma
  * Created at 18-08-2021
  */
-class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
+class SimpleContext implements IMutableContext {
     private final Map<String, ComponentDefinition<?>> components;
     private final List<IContextListener> contextListeners;
     private volatile boolean initialized;
@@ -37,7 +37,7 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
             if(initialized) {
                 throw new IllegalStateException("Context is already initialized");
             }
-            ComponentDefinition<? super Object> definition = new ComponentDefinition<>(name, (ClassInfo<Object>) clazz, component, this);
+            ComponentDefinition<? super Object> definition = new ComponentDefinition<>(name, (ClassInfo<Object>) clazz, component);
             ComponentDefinition<?> previous = components.putIfAbsent(name, definition);
             if (previous != null && previous != definition) {
                 throw new IllegalStateException(String.format("Duplicate component with name %s: %s and %s", name,
@@ -70,6 +70,24 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
     }
 
     @Override
+    public<T> void addMark(String name, Object mark) throws Exception {
+        stateLock.lock();
+        try {
+            if (initialized) {
+                throw new IllegalStateException("Context is already initialized");
+            }
+            ComponentDefinition<T> componentDefinition = getComponentDefinition(name);
+            if (componentDefinition.mark(mark)) {
+                for (IContextListener listener : contextListeners) {
+                    listener.onUpdated(componentDefinition, this);
+                }
+            }
+        } finally {
+            stateLock.unlock();
+        }
+    }
+
+    @Override
     public void clear() {
         components.clear();
     }
@@ -95,12 +113,5 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
         stateLock.lock();
         this.initialized = true;
         stateLock.unlock();
-    }
-
-    @Override
-    public void onMarkAdded(ComponentDefinition<?> componentDefinition) throws Exception {
-        for (IContextListener listener : contextListeners) {
-            listener.onUpdated(componentDefinition, this);
-        }
     }
 }
