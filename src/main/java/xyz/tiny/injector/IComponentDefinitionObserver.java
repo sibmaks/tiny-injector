@@ -6,6 +6,4 @@ package xyz.tiny.injector;
  */
 public interface IComponentDefinitionObserver {
     void onMarkAdded(ComponentDefinition<?> componentDefinition) throws Exception;
-
-    void onInstanceChanged(ComponentDefinition<?> componentDefinition) throws Exception;
 }

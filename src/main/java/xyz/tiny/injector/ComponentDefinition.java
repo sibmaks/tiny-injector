@@ -49,18 +49,15 @@ public class ComponentDefinition<T> {
      */
     public boolean mark(Object mark) throws Exception {
         Objects.requireNonNull(mark, "Mark can't be null");
-        if(!this.marks.contains(mark) && this.marks.add(mark) && componentDefinitionObserver != null) {
+        if(this.marks.add(mark) && componentDefinitionObserver != null) {
             componentDefinitionObserver.onMarkAdded(this);
             return true;
         }
         return false;
     }
 
-    void setComponentInstance(T componentInstance) throws Exception {
+    void setComponentInstance(T componentInstance) {
         this.componentInstance = componentInstance;
-        if(componentDefinitionObserver != null) {
-            componentDefinitionObserver.onInstanceChanged(this);
-        }
     }
 
     public boolean isMarked(Object ... marks) {
