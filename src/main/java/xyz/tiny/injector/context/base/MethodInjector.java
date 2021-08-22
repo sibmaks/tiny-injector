@@ -10,7 +10,6 @@ import xyz.tiny.injector.exception.MethodInjectionException;
 import xyz.tiny.injector.reflection.AnnotationInfo;
 import xyz.tiny.injector.reflection.ClassInfo;
 import xyz.tiny.injector.reflection.MethodInfo;
-import xyz.tiny.injector.utils.Pair;
 import xyz.tiny.injector.utils.StringUtils;
 
 import javax.inject.Inject;
@@ -28,13 +27,13 @@ import java.util.stream.Collectors;
  */
 @Component
 public class MethodInjector implements IContextListener {
-    private Map<String, Map<ComponentDefinition<?>, List<MethodInfo>>> depending;
-    private Map<ComponentDefinition<?>, List<Pair<String, MethodInfo>>> pendingInjections;
+    private Map<ComponentDefinition<?>, Set<InjectableMethod>> register;
+    private Map<String, Map<ComponentDefinition<?>, Set<InjectableMethod>>> depending;
     private Map<String, Set<ComponentDefinition<?>>> requiredComponents;
 
     @Override
     public void onCreated(IMutableContext mutableContext) {
-        this.pendingInjections = new HashMap<>();
+        this.register = new HashMap<>();
         this.requiredComponents = new HashMap<>();
         this.depending = new HashMap<>();
     }
@@ -42,6 +41,7 @@ public class MethodInjector implements IContextListener {
     @Override
     public void onInitialized(IContext context) {
         depending.clear();
+        register.clear();
         if(requiredComponents.isEmpty()) {
             return;
         }
@@ -61,45 +61,54 @@ public class MethodInjector implements IContextListener {
         ClassInfo<?> classInfo = componentDefinition.getComponentClass();
         boolean fullyInjected = true;
         for (MethodInfo methodInfo : classInfo.getMethodInfos()) {
-            if(methodInfo.getAnnotationInfos().stream().noneMatch(it -> it.isInherited(Inject.class))) {
+            if (methodInfo.getAnnotationInfos().stream().noneMatch(it -> it.isInherited(Inject.class))) {
                 continue;
             }
             Method method = methodInfo.getMethod();
-            if(method.getParameterCount() != 1) {
-                throw new MethodInjectionException(String.format("Injected method should have only 1 parameter: %s#%s",
+            if (method.getParameterCount() == 0) {
+                throw new MethodInjectionException(String.format("Injected method should accept at least one parameter: %s#%s",
                         classInfo.getName(), method.getName()));
             }
-            Named named = (Named) Arrays.stream(method.getParameterAnnotations()[0])
-                    .map(AnnotationInfo::from)
-                    .map(it -> it.getInherited(Named.class))
-                    .filter(Objects::nonNull)
-                    .map(AnnotationInfo::getAnnotation)
-                    .findFirst()
-                    .orElse(null);
-            String componentName = named == null ? null : named.value();
-            if(componentName == null || "".equals(componentName)) {
-                Class<?> parameterType = method.getParameterTypes()[0];
-                componentName = StringUtils.toLowerCase1st(parameterType.getSimpleName());
-            }
+            List<Object> args = new ArrayList<>();
+            Set<InjectableMethod> injectableMethods = register.computeIfAbsent(componentDefinition, it -> new HashSet<>());
+            InjectableMethod injectableMethod = new InjectableMethod(methodInfo);
+            injectableMethods.add(injectableMethod);
+            for (int i = 0; i < method.getParameterCount(); i++) {
+                Named named = (Named) Arrays.stream(method.getParameterAnnotations()[i])
+                        .map(AnnotationInfo::from)
+                        .map(it -> it.getInherited(Named.class))
+                        .filter(Objects::nonNull)
+                        .map(AnnotationInfo::getAnnotation)
+                        .findFirst()
+                        .orElse(null);
+                String componentName = named == null ? null : named.value();
+                if (componentName == null || "".equals(componentName)) {
+                    Class<?> parameterType = method.getParameterTypes()[i];
+                    componentName = StringUtils.toLowerCase1st(parameterType.getSimpleName());
+                }
 
-            Map<ComponentDefinition<?>, List<MethodInfo>> componentDefinitionListMap = depending.computeIfAbsent(componentName, it -> new HashMap<>());
-            List<MethodInfo> methodInfos = componentDefinitionListMap.computeIfAbsent(componentDefinition, it -> new ArrayList<>());
-            methodInfos.add(methodInfo);
+                Map<ComponentDefinition<?>, Set<InjectableMethod>> componentDefinitionListMap = depending
+                        .computeIfAbsent(componentName, it -> new HashMap<>());
+                componentDefinitionListMap.computeIfAbsent(componentDefinition, it -> new HashSet<>())
+                        .add(injectableMethod);
+                injectableMethod.requiredComponents.add(componentName);
 
-            Object component = context.getComponent(componentName);
-            if(component == null) {
-                List<Pair<String, MethodInfo>> pendingMethod = pendingInjections
-                        .computeIfAbsent(componentDefinition, it -> new ArrayList<>());
-                pendingMethod.add(Pair.of(componentName, methodInfo));
-                Set<ComponentDefinition<?>> pendingDefinitions = requiredComponents
-                        .computeIfAbsent(componentName, it -> new HashSet<>());
-                pendingDefinitions.add(componentDefinition);
-                fullyInjected = false;
-                continue;
+                Object component = context.getComponent(componentName);
+                if (component == null) {
+                    injectableMethod.pendingComponents.add(componentName);
+                    Set<ComponentDefinition<?>> pendingDefinitions = requiredComponents
+                            .computeIfAbsent(componentName, it -> new HashSet<>());
+                    pendingDefinitions.add(componentDefinition);
+                    fullyInjected = false;
+                } else {
+                    args.add(component);
+                }
             }
-            methodInfo.invoke(componentDefinition.getComponentBaseInstance(), component);
+            if (args.size() == method.getParameterCount()) {
+                methodInfo.invoke(componentDefinition.getComponentBaseInstance(), args.toArray());
+            }
         }
-        if(fullyInjected) {
+        if (fullyInjected) {
             context.addMark(componentDefinition.getName(), MethodInjector.class);
         }
     }
@@ -111,16 +120,17 @@ public class MethodInjector implements IContextListener {
             return;
         }
         for (ComponentDefinition<?> definition : definitions) {
-            List<Pair<String, MethodInfo>> fields = pendingInjections.get(definition).stream()
-                    .filter(it -> it.getLeft().equals(name))
-                    .collect(Collectors.toList());
-            for (Pair<String, MethodInfo> fieldInfo : fields) {
-                fieldInfo.getRight().invoke(definition.getComponentBaseInstance(),
-                        componentDefinition.getComponentInstance());
+            Set<InjectableMethod> injectableMethodSet = register.get(definition);
+            Set<InjectableMethod> injectableMethods = injectableMethodSet.stream()
+                    .filter(it -> it.pendingComponents.contains(name))
+                    .collect(Collectors.toSet());
+            for (InjectableMethod injectableMethod : injectableMethods) {
+                injectableMethod.pendingComponents.remove(name);
+                if(injectableMethod.pendingComponents.isEmpty()) {
+                    injectableMethod.invoke(definition.getComponentInstance(), context);
+                }
             }
-            pendingInjections.get(definition).removeAll(fields);
-            if(pendingInjections.get(definition).isEmpty()) {
-                pendingInjections.remove(definition);
+            if(injectableMethodSet.stream().allMatch(it -> it.pendingComponents.isEmpty())) {
                 context.addMark(definition.getName(), MethodInjector.class);
             }
         }
@@ -132,15 +142,34 @@ public class MethodInjector implements IContextListener {
         if(updateType != UpdateType.INSTANCE_CHANGED) {
             return;
         }
-        Map<ComponentDefinition<?>, List<MethodInfo>> componentDefinitionListMap = depending.get(componentDefinition.getName());
+        Map<ComponentDefinition<?>, Set<InjectableMethod>> componentDefinitionListMap = depending.get(componentDefinition.getName());
         if(componentDefinitionListMap == null) {
             return;
         }
-        for (Map.Entry<ComponentDefinition<?>, List<MethodInfo>> entry : componentDefinitionListMap.entrySet()) {
+        for (Map.Entry<ComponentDefinition<?>, Set<InjectableMethod>> entry : componentDefinitionListMap.entrySet()) {
             ComponentDefinition<?> definition = entry.getKey();
-            for (MethodInfo methodInfo : entry.getValue()) {
-                methodInfo.invoke(definition.getComponentInstance(), componentDefinition.getComponentInstance());
+            for (InjectableMethod methodInfo : entry.getValue()) {
+                if(methodInfo.pendingComponents.isEmpty()) {
+                    methodInfo.invoke(definition.getComponentInstance(), context);
+                }
             }
+        }
+    }
+
+    private static class InjectableMethod {
+        final MethodInfo methodInfo;
+        final List<String> requiredComponents;
+        final Set<String> pendingComponents;
+
+        private InjectableMethod(MethodInfo methodInfo) {
+            this.methodInfo = methodInfo;
+            this.requiredComponents = new ArrayList<>();
+            this.pendingComponents = new HashSet<>();
+        }
+
+        void invoke(Object source, IContext context) {
+            Object[] args = requiredComponents.stream().map(context::getComponent).toArray();
+            methodInfo.invoke(source, args);
         }
     }
 }

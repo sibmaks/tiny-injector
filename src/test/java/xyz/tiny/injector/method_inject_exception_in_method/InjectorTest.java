@@ -12,7 +12,7 @@ import xyz.tiny.injector.exception.MethodInjectionException;
 class InjectorTest {
 
     /**
-     * IllegalStateException expected in case of method injection without Named annotation
+     * MethodInjectionException expected in case of method injection without Named annotation
      */
     @Test
     void methodInjection() {

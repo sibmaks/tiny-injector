@@ -1,6 +1,5 @@
 package xyz.tiny.injector.utils;
 
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import xyz.tiny.injector.annotation.Component;
 import xyz.tiny.injector.reflection.AnnotationInfo;
@@ -114,34 +113,42 @@ public class ReflectionUtils {
         return classes;
     }
 
-    @SneakyThrows
     private static Set<ClassInfo<? super Object>> findClassesByJarProtocol(URL directory,
                                                                            Predicate<ClassInfo<? super Object>> condition) {
         String[] parts = directory.getFile().split("!");
         String jarFileName = parts[0];
         String innerPath = parts[1].substring(1);
-        URL jarURL = new URL(jarFileName);
-        File jarFile = new File(jarURL.getFile());
-        if(!jarFile.exists()) {
-            return Collections.emptySet();
-        }
-        Set<ClassInfo<? super Object>> classInfos = new HashSet<>();
-        try (ZipFile zipFile = new ZipFile(jarURL.getFile())) {
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry zipEntry = entries.nextElement();
-                String name = zipEntry.getName();
-                if(name.startsWith(innerPath) && name.endsWith(".class")) {
-                    String className = name.substring(0, name.length() - ".class".length()).replace("/", ".");
-                    Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
-                    ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
-                    if(condition.test(classInfo)) {
-                        classInfos.add(classInfo);
+        try {
+            URL jarURL = new URL(jarFileName);
+            File jarFile = new File(jarURL.getFile());
+            if (!jarFile.exists()) {
+                return Collections.emptySet();
+            }
+            Set<ClassInfo<? super Object>> classInfos = new HashSet<>();
+            try (ZipFile zipFile = new ZipFile(jarURL.getFile())) {
+                Enumeration<? extends ZipEntry> entries = zipFile.entries();
+                while (entries.hasMoreElements()) {
+                    ZipEntry zipEntry = entries.nextElement();
+                    String name = zipEntry.getName();
+                    if (name.startsWith(innerPath) && name.endsWith(".class")) {
+                        String className = name.substring(0, name.length() - ".class".length()).replace("/", ".");
+                        try {
+                            Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
+                            ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                            if (condition.test(classInfo)) {
+                                classInfos.add(classInfo);
+                            }
+                        } catch (ClassNotFoundException e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
                 }
             }
+            return classInfos;
+        } catch (Exception e) {
+            log.error("Get classes from jar exception", e);
         }
-        return classInfos;
+        return Collections.emptySet();
     }
 
     private static Set<ClassInfo<? super Object>> findClassesByFileProtocol(File directory, String packageName,

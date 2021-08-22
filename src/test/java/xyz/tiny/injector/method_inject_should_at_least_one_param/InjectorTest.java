@@ -1,4 +1,4 @@
-package xyz.tiny.injector.method_injection_only_one_params;
+package xyz.tiny.injector.method_inject_should_at_least_one_param;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -12,10 +12,10 @@ import xyz.tiny.injector.exception.MethodInjectionException;
 class InjectorTest {
 
     /**
-     * IllegalStateException expected in case of method injection accept more than 1 param
+     * MethodInjectionException expected in case of method injection without params
      */
     @Test
-    void injectedMethodShouldHaveOnlyOneParam() {
+    void methodInjection() {
         Assertions.assertThrows(MethodInjectionException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
     }
 }

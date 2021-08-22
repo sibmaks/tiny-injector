@@ -11,8 +11,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 /**
  * @author drobyshev-ma
  * Created at 22-08-2021
@@ -55,6 +53,24 @@ class SimpleContextTest {
         simpleContext.addMark("any", "mark1");
         simpleContext.addMark("any", "mark1");
         Assertions.assertEquals(1, atomicInteger.get());
+    }
+
+    @Test
+    public void ifUpdateNotChangeInstanceListenerNotCalled() throws Exception {
+        AtomicInteger atomicInteger = new AtomicInteger();
+
+        IContextListener listener = new IContextListener() {
+            @Override
+            public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) {
+                atomicInteger.incrementAndGet();
+            }
+        };
+
+        SimpleContext simpleContext = new SimpleContext(Arrays.asList(listener));
+        Component component = new Component();
+        simpleContext.add("any", ClassInfo.from(Component.class), component);
+        simpleContext.update("any", component);
+        Assertions.assertEquals(0, atomicInteger.get());
     }
 
     static class Component {

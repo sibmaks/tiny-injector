@@ -75,19 +75,27 @@ public class AnotherComponent {
 ## Method injection
 Requirements:
 - A method in component should be annotated by `javax.inject.Inject`
-- Injection is allowed only in methods, that receive only 1 parameter
+
+For name chaining `javax.inject.Named` annotation can be used.
 
 ```java
 // in SomeComponent.java
 import xyz.tiny.injector.annotation.Component;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 @Component
 public class SomeComponent {
     @Inject
     void set(AnotherComponent param) {
-      // This method can be called more than once, if some of customizer decide to change injected value
+      // This method can be called more than once, if some customizers decide to change injected value
+    }
+    
+    @Inject
+    void set2Values(@Named("instnace1") AnotherComponent param,
+                    @Named("instance2") AnotherComponent param2) {
+      // This method can be called more than once, if some customizers decide to change injected value
     }
 }
 

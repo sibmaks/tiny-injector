@@ -67,6 +67,44 @@ class MethodInjectorTest {
         Assertions.assertEquals(cComponent.getComponentInstance(), aComponent.getComponentInstance().cComponent);
     }
 
+    @Test
+    public void methodPendingInjection() throws Exception {
+        MethodInjector methodInjector = new MethodInjector();
+
+        IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
+
+        methodInjector.onCreated(mutableContext);
+
+        ComponentDefinition<SeveralInjectsComponent> component = buildComponentDefinition("severalInjectsComponent", new SeveralInjectsComponent(), SeveralInjectsComponent.class);
+        ComponentDefinition<BComponent> bComponent = buildComponentDefinition("bComponent", new BComponent("any"), BComponent.class);
+        ComponentDefinition<CComponent> cComponent = buildComponentDefinition("cComponent", new CComponent(), CComponent.class);
+
+        methodInjector.onAddComponentDefinition(component, mutableContext);
+
+        Assertions.assertNull(component.getComponentInstance().bComponent);
+        Assertions.assertNull(component.getComponentInstance().cComponent);
+
+        Mockito.when(mutableContext.getComponent("bComponent")).thenReturn(bComponent.getComponentInstance());
+
+        methodInjector.onAddComponentDefinition(bComponent, mutableContext);
+
+        Assertions.assertNull(component.getComponentInstance().bComponent);
+        Assertions.assertNull(component.getComponentInstance().cComponent);
+
+        methodInjector.onUpdated(UpdateType.INSTANCE_CHANGED, bComponent, mutableContext);
+
+        Assertions.assertNull(component.getComponentInstance().bComponent);
+        Assertions.assertNull(component.getComponentInstance().cComponent);
+
+        Mockito.when(mutableContext.getComponent("cComponent")).thenReturn(cComponent.getComponentInstance());
+
+        methodInjector.onAddComponentDefinition(cComponent, mutableContext);
+
+        Assertions.assertEquals(bComponent.getComponentInstance(), component.getComponentInstance().bComponent);
+        Assertions.assertEquals(cComponent.getComponentInstance(), component.getComponentInstance().cComponent);
+
+    }
+
     private<T> ComponentDefinition<T> buildComponentDefinition(String name, T object, Class<T> clazz) {
         return new ComponentDefinition<>(name, ClassInfo.from(clazz), object);
     }
@@ -84,6 +122,17 @@ class MethodInjectorTest {
 
         @Inject
         public void set2(CComponent cComponent) {
+            this.cComponent = cComponent;
+        }
+    }
+
+    static class SeveralInjectsComponent {
+        BComponent bComponent;
+        CComponent cComponent;
+
+        @Inject
+        public void set(BComponent bComponent, CComponent cComponent) {
+            this.bComponent = bComponent;
             this.cComponent = cComponent;
         }
     }
