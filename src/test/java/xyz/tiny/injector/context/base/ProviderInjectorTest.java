@@ -7,6 +7,9 @@ import xyz.tiny.injector.ComponentDefinition;
 import xyz.tiny.injector.context.IMutableContext;
 import xyz.tiny.injector.reflection.ClassInfo;
 
+import java.lang.reflect.Field;
+import java.util.Set;
+
 /**
  * @author drobyshev-ma
  * Created at 22-08-2021
@@ -46,8 +49,11 @@ class ProviderInjectorTest {
         ProviderInjector providerInjector = new ProviderInjector();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
-        componentDefinition.mark(FieldInjector.class);
-        componentDefinition.mark(MethodInjector.class);
+        Field field = ComponentDefinition.class.getDeclaredField("marks");
+        field.setAccessible(true);
+        Set<Object> marks = (Set<Object>) field.get(componentDefinition);
+        marks.add(FieldInjector.class);
+        marks.add(MethodInjector.class);
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
 
@@ -63,7 +69,10 @@ class ProviderInjectorTest {
         ProviderInjector providerInjector = new ProviderInjector();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
-        componentDefinition.mark(FieldInjector.class);
+        Field field = ComponentDefinition.class.getDeclaredField("marks");
+        field.setAccessible(true);
+        Set<Object> marks = (Set<Object>) field.get(componentDefinition);
+        marks.add(FieldInjector.class);
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
 
@@ -77,7 +86,7 @@ class ProviderInjectorTest {
 
         Mockito.verify(mutableContext, Mockito.never()).add(Mockito.eq("providedComponent"), Mockito.any(), Mockito.any());
 
-        componentDefinition.mark(MethodInjector.class);
+        marks.add(MethodInjector.class);
 
         providerInjector.onUpdated(componentDefinition, mutableContext);
 
@@ -89,7 +98,10 @@ class ProviderInjectorTest {
         ProviderInjector providerInjector = new ProviderInjector();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
-        componentDefinition.mark(FieldInjector.class);
+        Field field = ComponentDefinition.class.getDeclaredField("marks");
+        field.setAccessible(true);
+        Set<Object> marks = (Set<Object>) field.get(componentDefinition);
+        marks.add(FieldInjector.class);
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
 
@@ -105,6 +117,6 @@ class ProviderInjectorTest {
     }
 
     private<T> ComponentDefinition<T> buildComponentDefinition(String name, T object, Class<T> clazz) {
-        return new ComponentDefinition<>(name, ClassInfo.from(clazz), object, null);
+        return new ComponentDefinition<>(name, ClassInfo.from(clazz), object);
     }
 }

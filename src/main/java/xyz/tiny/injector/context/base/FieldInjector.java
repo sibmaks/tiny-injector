@@ -48,7 +48,7 @@ public class FieldInjector implements IContextListener {
     @Override
     public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
         doComponentInjections(componentDefinition, context);
-        doPendingInjections(componentDefinition);
+        doPendingInjections(componentDefinition, context);
     }
 
     private void doComponentInjections(ComponentDefinition<?> componentDefinition,
@@ -89,11 +89,11 @@ public class FieldInjector implements IContextListener {
             fieldInfo.set(componentDefinition.getComponentBaseInstance(), component);
         }
         if(fullyInjected) {
-            componentDefinition.mark(FieldInjector.class);
+            context.addMark(componentDefinition.getName(), FieldInjector.class);
         }
     }
 
-    private void doPendingInjections(ComponentDefinition<?> componentDefinition) throws Exception {
+    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
         String name = componentDefinition.getName();
         Set<ComponentDefinition<?>> definitions = requiredComponents.get(name);
         if(definitions == null) {
@@ -109,7 +109,7 @@ public class FieldInjector implements IContextListener {
             pendingInjections.get(definition).removeAll(fields);
             if(pendingInjections.get(definition).isEmpty()) {
                 pendingInjections.remove(definition);
-                definition.mark(FieldInjector.class);
+                context.addMark(definition.getName(), FieldInjector.class);
             }
         }
         requiredComponents.remove(name);
