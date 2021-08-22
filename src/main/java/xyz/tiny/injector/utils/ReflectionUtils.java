@@ -1,5 +1,6 @@
 package xyz.tiny.injector.utils;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import xyz.tiny.injector.annotation.Component;
 import xyz.tiny.injector.reflection.AnnotationInfo;
@@ -14,6 +15,8 @@ import java.net.URL;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Reflections utils for getting class in packages, get class annotations and so on.
@@ -89,20 +92,60 @@ public class ReflectionUtils {
         }
         String path = packageName.replace('.', '/');
         Enumeration<URL> resources = classLoader.getResources(path);
-        List<File> dirs = new ArrayList<>();
+        Map<String, List<URL>> dirs = new HashMap<>();
+        dirs.put("jar", new ArrayList<>());
+        dirs.put("file", new ArrayList<>());
         while (resources.hasMoreElements()) {
             URL resource = resources.nextElement();
-            dirs.add(new File(resource.getFile()));
+            List<URL> files = dirs.get(resource.getProtocol());
+            if(files == null) {
+                log.warn("Protocol {} is unsupported", resource.getProtocol());
+                continue;
+            }
+            files.add(resource);
         }
         Set<ClassInfo<? super Object>> classes = new HashSet<>();
-        for (File directory : dirs) {
-            classes.addAll(findClasses(directory, packageName, condition));
+        for (URL directory : dirs.get("file")) {
+            classes.addAll(findClassesByFileProtocol(new File(directory.getFile()), packageName, condition));
+        }
+        for (URL directory : dirs.get("jar")) {
+            classes.addAll(findClassesByJarProtocol(directory, condition));
         }
         return classes;
     }
 
-    private static Set<ClassInfo<? super Object>> findClasses(File directory, String packageName,
-                                                              Predicate<ClassInfo<? super Object>> condition) {
+    @SneakyThrows
+    private static Set<ClassInfo<? super Object>> findClassesByJarProtocol(URL directory,
+                                                                           Predicate<ClassInfo<? super Object>> condition) {
+        String[] parts = directory.getFile().split("!");
+        String jarFileName = parts[0];
+        String innerPath = parts[1].substring(1);
+        URL jarURL = new URL(jarFileName);
+        File jarFile = new File(jarURL.getFile());
+        if(!jarFile.exists()) {
+            return Collections.emptySet();
+        }
+        Set<ClassInfo<? super Object>> classInfos = new HashSet<>();
+        try (ZipFile zipFile = new ZipFile(jarURL.getFile())) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry zipEntry = entries.nextElement();
+                String name = zipEntry.getName();
+                if(name.startsWith(innerPath) && name.endsWith(".class")) {
+                    String className = name.substring(0, name.length() - ".class".length()).replace("/", ".");
+                    Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
+                    ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                    if(condition.test(classInfo)) {
+                        classInfos.add(classInfo);
+                    }
+                }
+            }
+        }
+        return classInfos;
+    }
+
+    private static Set<ClassInfo<? super Object>> findClassesByFileProtocol(File directory, String packageName,
+                                                                            Predicate<ClassInfo<? super Object>> condition) {
         if (!directory.exists()) {
             return Collections.emptySet();
         }
@@ -112,7 +155,7 @@ public class ReflectionUtils {
             for (File file : files) {
                 if (file.isDirectory()) {
                     if(!file.getName().contains(".'")) {
-                        classes.addAll(findClasses(file, packageName + "." + file.getName(), condition));
+                        classes.addAll(findClassesByFileProtocol(file, packageName + "." + file.getName(), condition));
                     }
                 } else if (file.getName().endsWith(".class")) {
                     try {
