@@ -166,7 +166,7 @@ public class ReflectionUtils {
                 .map(it -> new MethodInfo(it, AnnotationInfo.forMethod(it)))
                 .collect(Collectors.toSet());
         for (MethodInfo method : getMethods(clazz.getSuperclass())) {
-            if(method.isPrivate() || !method.isBridge() && !method.isSynthetic() && methods.stream().noneMatch(it -> it.same(method))) {
+            if(!method.isBridge() && !method.isSynthetic() && (method.isPrivate() || methods.stream().noneMatch(it -> it.same(method)))) {
                 methods.add(method);
             }
         }

@@ -4,10 +4,7 @@ import xyz.tiny.injector.context.IMutableContext;
 import xyz.tiny.injector.context.listener.IContextListener;
 import xyz.tiny.injector.reflection.ClassInfo;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,7 +23,7 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
 
     SimpleContext(List<IContextListener> contextListeners) throws Exception {
         this.components = new HashMap<>();
-        this.contextListeners = new ArrayList<>(contextListeners);
+        this.contextListeners = Collections.unmodifiableList(contextListeners);
 
         for (IContextListener listener : contextListeners) {
             listener.onCreated(this);
@@ -73,11 +70,6 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
     }
 
     @Override
-    public void addListener(IContextListener listener) {
-        this.contextListeners.add(listener);
-    }
-
-    @Override
     public void clear() {
         components.clear();
     }
@@ -110,9 +102,5 @@ class SimpleContext implements IMutableContext, IComponentDefinitionObserver {
         for (IContextListener listener : contextListeners) {
             listener.onUpdated(componentDefinition, this);
         }
-    }
-
-    @Override
-    public void onInstanceChanged(ComponentDefinition<?> componentDefinition) throws Exception {
     }
 }
