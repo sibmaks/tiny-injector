@@ -3,8 +3,13 @@ package xyz.tiny.injector.context.listener;
 import xyz.tiny.injector.ComponentDefinition;
 import xyz.tiny.injector.context.IContext;
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.context.UpdateType;
 
 /**
+ * Context listener adapter, calls in context build stage.
+ * onCreated and onInitialized always invokes once in strict order (onCreated -> onInitialized)
+ * onAddComponentDefinition and onUpdate can be not invoked if there are no components in context, or they are not changed
+ *
  * @author drobyshev-ma
  * Created at 21-08-2021
  */
@@ -32,7 +37,7 @@ public interface IContextListener {
      *
      * @param context modifiable context
      */
-    default void onUpdated(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    default void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
 
     }
 

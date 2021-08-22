@@ -4,6 +4,7 @@ import xyz.tiny.injector.ComponentDefinition;
 import xyz.tiny.injector.annotation.Component;
 import xyz.tiny.injector.context.IContext;
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.context.UpdateType;
 import xyz.tiny.injector.context.listener.IContextListener;
 import xyz.tiny.injector.reflection.AnnotationInfo;
 import xyz.tiny.injector.reflection.ClassInfo;
@@ -18,11 +19,16 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
+ * Provider processor
+ * Await until all providers will be fully injected after that call get method and add new component into context
+ *
+ * In case if some of required dependencies not injected throw an exception
+ *
  * @author drobyshev-ma
  * Created at 21-08-2021
  */
 @Component
-public class ProviderInjector implements IContextListener {
+public class ProviderProcessor implements IContextListener {
     private Map<ComponentDefinition<?>, String> pendingProviders;
 
     @Override
@@ -78,7 +84,10 @@ public class ProviderInjector implements IContextListener {
     }
 
     @Override
-    public void onUpdated(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+        if(updateType != UpdateType.MARKED) {
+            return;
+        }
         String componentName = pendingProviders.get(componentDefinition);
         if(componentName != null) {
             Object existingComponent = context.getComponent(componentName);

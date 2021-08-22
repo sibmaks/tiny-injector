@@ -1,6 +1,7 @@
 package xyz.tiny.injector;
 
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.context.UpdateType;
 import xyz.tiny.injector.context.listener.IContextListener;
 import xyz.tiny.injector.reflection.ClassInfo;
 
@@ -60,9 +61,12 @@ class SimpleContext implements IMutableContext {
                 throw new IllegalStateException("Context is already initialized");
             }
             ComponentDefinition<T> componentDefinition = getComponentDefinition(name);
+            if(componentDefinition.getComponentInstance() == newInstance) {
+                return;
+            }
             componentDefinition.setComponentInstance(newInstance);
             for (IContextListener listener : contextListeners) {
-                listener.onUpdated(componentDefinition, this);
+                listener.onUpdated(UpdateType.INSTANCE_CHANGED, componentDefinition, this);
             }
         } finally {
             stateLock.unlock();
@@ -79,7 +83,7 @@ class SimpleContext implements IMutableContext {
             ComponentDefinition<T> componentDefinition = getComponentDefinition(name);
             if (componentDefinition.mark(mark)) {
                 for (IContextListener listener : contextListeners) {
-                    listener.onUpdated(componentDefinition, this);
+                    listener.onUpdated(UpdateType.MARKED, componentDefinition, this);
                 }
             }
         } finally {

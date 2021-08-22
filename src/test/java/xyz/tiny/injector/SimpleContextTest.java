@@ -3,6 +3,7 @@ package xyz.tiny.injector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.context.UpdateType;
 import xyz.tiny.injector.context.listener.IContextListener;
 import xyz.tiny.injector.reflection.ClassInfo;
 
@@ -44,7 +45,7 @@ class SimpleContextTest {
 
         IContextListener listener = new IContextListener() {
             @Override
-            public void onUpdated(ComponentDefinition<?> componentDefinition, IMutableContext context) {
+            public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) {
                 atomicInteger.incrementAndGet();
             }
         };

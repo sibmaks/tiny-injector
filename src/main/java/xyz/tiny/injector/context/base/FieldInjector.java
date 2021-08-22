@@ -4,6 +4,7 @@ import xyz.tiny.injector.ComponentDefinition;
 import xyz.tiny.injector.annotation.Component;
 import xyz.tiny.injector.context.IContext;
 import xyz.tiny.injector.context.IMutableContext;
+import xyz.tiny.injector.context.UpdateType;
 import xyz.tiny.injector.context.listener.IContextListener;
 import xyz.tiny.injector.exception.FieldInjectionException;
 import xyz.tiny.injector.reflection.AnnotationInfo;
@@ -17,6 +18,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Field dependency injector, execute field injections for all components
+ * In case of component updated, all depended on component's fields will be injected again.
+ *
  * @author drobyshev-ma
  * Created at 21-08-2021
  */
@@ -116,9 +120,12 @@ public class FieldInjector implements IContextListener {
     }
 
     @Override
-    public void onUpdated(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+        if(updateType != UpdateType.INSTANCE_CHANGED) {
+            return;
+        }
         Map<ComponentDefinition<?>, List<FieldInfo>> componentDefinitionListMap = depending.get(componentDefinition.getName());
-        if(componentDefinitionListMap == null || componentDefinitionListMap.isEmpty()) {
+        if(componentDefinitionListMap == null) {
             return;
         }
         for (Map.Entry<ComponentDefinition<?>, List<FieldInfo>> entry : componentDefinitionListMap.entrySet()) {
