@@ -69,7 +69,8 @@ public class MethodInjector implements IContextListener {
                 throw new MethodInjectionException(String.format("Injected method should have only 1 parameter: %s#%s",
                         classInfo.getName(), method.getName()));
             }
-            Named named = (Named) methodInfo.getAnnotationInfos().stream()
+            Named named = (Named) Arrays.stream(method.getParameterAnnotations()[0])
+                    .map(AnnotationInfo::from)
                     .map(it -> it.getInherited(Named.class))
                     .filter(Objects::nonNull)
                     .map(AnnotationInfo::getAnnotation)

@@ -14,8 +14,7 @@ public class AComponent {
     AComponent aComponent;
 
     @Inject
-    @Named
-    public void doInject(AComponent component) {
+    public void doInject(@Named AComponent component) {
         this.aComponent = component;
     }
 }

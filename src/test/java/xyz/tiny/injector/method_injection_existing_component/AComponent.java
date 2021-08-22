@@ -12,8 +12,7 @@ import javax.inject.Named;
 @Component
 public class AComponent {
     @Inject
-    @Named("unknown")
-    public void doInject(AComponent component) {
+    public void doInject(@Named("unknown") AComponent aComponent) {
 
     }
 }

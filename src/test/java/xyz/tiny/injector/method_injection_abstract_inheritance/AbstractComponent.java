@@ -14,8 +14,7 @@ abstract class AbstractComponent {
     abstract void setValue(BComponent bComponent);
 
     @Inject
-    @Named("bComponent3")
-    private void someValue2(BComponent bComponent) {
+    private void someValue2(@Named("bComponent3") BComponent bComponent) {
         this.bComponent3 = bComponent;
     }
 }

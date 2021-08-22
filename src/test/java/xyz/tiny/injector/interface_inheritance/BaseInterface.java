@@ -13,8 +13,7 @@ import javax.inject.Named;
 interface BaseInterface {
 
     @Inject
-    @Named("iIComponent")
-    void setValue(IIComponent component);
+    void setValue(@Named("iIComponent") IIComponent component);
 
     IIComponent getValue();
 }

@@ -12,8 +12,7 @@ import javax.inject.Named;
 @Component
 public class AComponent {
     @Inject
-    @Named("aComponent")
-    public void doInject(AComponent component) {
+    public void doInject(@Named("aComponent") AComponent component) {
         throw new RuntimeException();
     }
 }

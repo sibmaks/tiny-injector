@@ -15,14 +15,12 @@ public class AComponent implements IComponent {
     BComponent bComponent2;
 
     @Override
-    @Named("bComponent1")
-    public void setValue(BComponent bComponent) {
+    public void setValue(@Named("bComponent1") BComponent bComponent) {
         bComponent1 = bComponent;
     }
 
     @Inject
-    @Named("bComponent2")
-    void someValue2(BComponent bComponent) {
+    void someValue2(@Named("bComponent2") BComponent bComponent) {
         bComponent2 = bComponent;
     }
 }

@@ -13,8 +13,7 @@ import javax.inject.Named;
 @Component
 public class AComponent {
     @Inject
-    @Named("bComponent")
-    public void doInject(BComponent bComponent) {
+    public void doInject(@Named("bComponent") BComponent bComponent) {
 
     }
 }
