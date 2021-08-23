@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'jacoco'
+    id 'maven-publish'
 }
 
 group 'xyz.tiny.injector'
@@ -8,6 +9,24 @@ version '0.0.1'
 
 repositories {
     mavenCentral()
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/sibmaks/tiny-injector")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GIT_USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("GIT_TOKEN")
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+        }
+    }
 }
 
 jar {
