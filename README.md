@@ -23,10 +23,10 @@ For code generation used **Lombok**.
 
 Any class what has to be processed by library should be annotated by this annotation:
 ```java
-xyz.tiny.injector.annotation.Component
+com.github.sibmaks.ti.annotation.Component
 ```
 
-To execute injection you should call any of `buildInjections` methods in `xyz.tiny.injector.Injector`. 
+To execute injection you should call any of `buildInjections` methods in `com.github.sibmaks.ti.Injector`. 
 
 By default, injector used class loader of current thread.
 
@@ -35,8 +35,8 @@ The return type is `IContext` interface, which contains all created components a
 For example
 ```java
 
-import xyz.tiny.injector.Injector;
-import xyz.tiny.injector.context.IContext;
+import com.github.sibmaks.ti.Injector;
+import com.github.sibmaks.ti.context.IContext;
 
 public class Application {
     public static void main(String ... args) throws Throwable {
@@ -51,10 +51,10 @@ public class Application {
 ## Field injection
 Requirements:
 - A field in component should be annotated by `javax.inject.Inject`
-- 
+
 ```java
 // in SomeComponent.java
-import xyz.tiny.injector.annotation.Component;
+import com.github.sibmaks.ti.annotation.Component;
 
 import javax.inject.Inject;
 
@@ -63,9 +63,10 @@ public class SomeComponent {
     @Inject
     private AnotherComponent anotherComponent;
 }
-
+```
+```java
 // in AnotherComponent.java
-import xyz.tiny.injector.annotation.Component;
+import com.github.sibmaks.ti.annotation.Component;
 
 @Component
 public class AnotherComponent {
@@ -80,7 +81,7 @@ For name chaining `javax.inject.Named` annotation can be used.
 
 ```java
 // in SomeComponent.java
-import xyz.tiny.injector.annotation.Component;
+import com.github.sibmaks.ti.annotation.Component;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -98,9 +99,10 @@ public class SomeComponent {
       // This method can be called more than once, if some customizers decide to change injected value
     }
 }
-
+```
+```java
 // in AnotherComponent.java
-import xyz.tiny.injector.annotation.Component;
+import com.github.sibmaks.ti.annotation.Component;
 
 @Component
 public class AnotherComponent {
@@ -112,12 +114,13 @@ public class AnotherComponent {
 Called once after all context fully initialized.
 
 Requirements:
-- A method in component should be annotated by `xyz.tiny.injector.annotation.PostInitialization`
+- A method in component should be annotated by `com.github.sibmaks.ti.annotation.PostInitialization`
 - Annotated method should not receive any parameters
 
 ```java
 // in SomeComponent.java
-import xyz.tiny.injector.annotation.Component;
+import com.github.sibmaks.ti.annotation.Component;
+import com.github.sibmaks.ti.annotation.PostInitialization;
 
 import javax.inject.Inject;
 
@@ -141,10 +144,10 @@ In this example **cglib** used
 ```java
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
-import xyz.tiny.injector.ComponentDefinition;
-import xyz.tiny.injector.annotation.Component;
-import xyz.tiny.injector.context.IMutableContext;
-import xyz.tiny.injector.context.listener.IContextListener;
+import com.github.sibmaks.ti.ComponentDefinition;
+import com.github.sibmaks.ti.annotation.Component;
+import com.github.sibmaks.ti.context.IMutableContext;
+import com.github.sibmaks.ti.context.listener.IContextListener;
 
 @Component
 public class ProxyWrapper implements IContextListener {

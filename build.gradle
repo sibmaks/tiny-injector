@@ -2,10 +2,10 @@ plugins {
     id 'java'
     id 'jacoco'
     id 'maven-publish'
+    id "org.sonarqube" version "3.3"
 }
 
-group 'xyz.tiny.injector'
-version '0.0.1'
+sourceCompatibility = "${jdk_version}"
 
 repositories {
     mavenCentral()
@@ -28,6 +28,24 @@ publishing {
         }
     }
 }
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "sibmaks_tiny-injector"
+        property "sonar.organization", "sibmaks"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.java.source", "${jdk_version}"
+        property "sonar.java.target", "${jdk_version}"
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+}
+
+test.finalizedBy jacocoTestReport
 
 jar {
     from {
