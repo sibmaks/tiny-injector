@@ -1,7 +1,7 @@
 package com.github.sibmaks.ti.jar;
 
 import com.github.sibmaks.ti.annotation.Component;
-import xyz.tiny.injector.jar.components.AComponent;
+import other.test.pckg.ti.AComponent;
 
 import javax.inject.Inject;
 

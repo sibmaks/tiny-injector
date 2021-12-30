@@ -1,11 +1,11 @@
 package com.github.sibmaks.ti.jar;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import com.github.sibmaks.ti.Injector;
 import com.github.sibmaks.ti.context.IContext;
-import xyz.tiny.injector.jar.components.AComponent;
-import xyz.tiny.injector.jar.components.BComponent;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import other.test.pckg.ti.AComponent;
+import other.test.pckg.ti.BComponent;
 
 /**
  * @author drobyshev-ma
@@ -15,7 +15,7 @@ class InjectorTest {
 
     @Test
     void componentsFromJarInjectedToo() throws Throwable {
-        IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
+        IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName(), AComponent.class.getPackage().getName());
         AComponent aComponent = context.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);
         BComponent bComponent = context.getComponent("bComponent");

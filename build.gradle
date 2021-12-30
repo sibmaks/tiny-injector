@@ -54,8 +54,8 @@ jar {
 }
 
 dependencies {
-    compileOnly 'org.projectlombok:lombok:1.18.20'
-    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    compileOnly 'org.projectlombok:lombok:1.18.22'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
 
     implementation group: 'javax.inject', name: 'javax.inject', version: '1'
 
@@ -63,15 +63,15 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.26'
     implementation group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 
     testImplementation fileTree(dir: 'testLibs', include: ['*.jar'])
     testImplementation group: 'cglib', name: 'cglib', version: '3.3.0'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.12.1'
     testCompileOnly group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     testCompileOnly 'org.projectlombok:lombok:1.18.20'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
 }
 
 test {
