@@ -1,8 +1,8 @@
 package com.github.sibmaks.ti.duplicate_components_in_different_packages;
 
+import com.github.sibmaks.ti.Injector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import com.github.sibmaks.ti.Injector;
 
 /**
  * @author drobyshev-ma
@@ -16,8 +16,7 @@ class InjectorTest {
     @Test
     void duplicateComponentsInjection() {
         String name = InjectorTest.class.getPackage().getName();
-        Assertions.assertThrows(IllegalStateException.class, () -> Injector.buildInjections(
-                name + ".a", name + ".b"
-        ));
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> Injector.buildInjections(name + ".a", name + ".b"));
     }
 }

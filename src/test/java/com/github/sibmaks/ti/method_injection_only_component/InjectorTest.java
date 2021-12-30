@@ -1,5 +1,6 @@
 package com.github.sibmaks.ti.method_injection_only_component;
 
+import com.github.sibmaks.ti.exception.InitializationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.github.sibmaks.ti.Injector;

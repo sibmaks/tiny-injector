@@ -1,8 +1,8 @@
 package com.github.sibmaks.ti.no_interface_impl;
 
+import com.github.sibmaks.ti.Injector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import com.github.sibmaks.ti.Injector;
 
 /**
  * @author drobyshev-ma

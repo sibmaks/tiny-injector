@@ -46,7 +46,7 @@ public class Injector {
             log.debug("Context built");
 
             return context;
-        } catch (Exception e) {
+        } catch (IOException | NoSuchMethodException | InstantiationException | IllegalAccessException e) {
             throw new InitializationException(e);
         }
     }

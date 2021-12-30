@@ -1,9 +1,9 @@
 package com.github.sibmaks.ti.field_inject_not_exists_component;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import com.github.sibmaks.ti.Injector;
 import com.github.sibmaks.ti.exception.FieldInjectionException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author drobyshev-ma
