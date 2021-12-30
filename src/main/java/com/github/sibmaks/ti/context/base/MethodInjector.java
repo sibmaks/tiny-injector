@@ -71,37 +71,7 @@ public class MethodInjector implements IContextListener {
             Set<InjectableMethod> injectableMethods = register.computeIfAbsent(componentDefinition, it -> new HashSet<>());
             InjectableMethod injectableMethod = new InjectableMethod(methodInfo);
             injectableMethods.add(injectableMethod);
-            for (int i = 0; i < method.getParameterCount(); i++) {
-                Named named = (Named) Arrays.stream(method.getParameterAnnotations()[i])
-                        .map(AnnotationInfo::from)
-                        .map(it -> it.getInherited(Named.class))
-                        .filter(Objects::nonNull)
-                        .map(AnnotationInfo::getAnnotation)
-                        .findFirst()
-                        .orElse(null);
-                String componentName = named == null ? null : named.value();
-                if (componentName == null || "".equals(componentName)) {
-                    Class<?> parameterType = method.getParameterTypes()[i];
-                    componentName = StringUtils.toLowerCase1st(parameterType.getSimpleName());
-                }
-
-                Map<ComponentDefinition<?>, Set<InjectableMethod>> componentDefinitionListMap = depending
-                        .computeIfAbsent(componentName, it -> new HashMap<>());
-                componentDefinitionListMap.computeIfAbsent(componentDefinition, it -> new HashSet<>())
-                        .add(injectableMethod);
-                injectableMethod.requiredComponents.add(componentName);
-
-                Object component = context.getComponent(componentName);
-                if (component == null) {
-                    injectableMethod.pendingComponents.add(componentName);
-                    Set<ComponentDefinition<?>> pendingDefinitions = requiredComponents
-                            .computeIfAbsent(componentName, it -> new HashSet<>());
-                    pendingDefinitions.add(componentDefinition);
-                    fullyInjected = false;
-                } else {
-                    args.add(component);
-                }
-            }
+            fullyInjected = proceedMethodInjection(componentDefinition, context, method, args, injectableMethod);
             if (args.size() == method.getParameterCount()) {
                 methodInfo.invoke(componentDefinition.getComponentBaseInstance(), args.toArray());
             }
@@ -109,6 +79,41 @@ public class MethodInjector implements IContextListener {
         if (fullyInjected) {
             context.addMark(componentDefinition.getName(), MethodInjector.class);
         }
+    }
+
+    private boolean proceedMethodInjection(ComponentDefinition<?> componentDefinition, IMutableContext context,
+                                           Method method, List<Object> args, InjectableMethod injectableMethod) {
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            Named named = (Named) Arrays.stream(method.getParameterAnnotations()[i])
+                    .map(AnnotationInfo::from)
+                    .map(it -> it.getInherited(Named.class))
+                    .filter(Objects::nonNull)
+                    .map(AnnotationInfo::getAnnotation)
+                    .findFirst()
+                    .orElse(null);
+            String componentName = named == null ? null : named.value();
+            if (componentName == null || "".equals(componentName)) {
+                Class<?> parameterType = method.getParameterTypes()[i];
+                componentName = StringUtils.toLowerCase1st(parameterType.getSimpleName());
+            }
+
+            Map<ComponentDefinition<?>, Set<InjectableMethod>> componentDefinitionListMap = depending
+                    .computeIfAbsent(componentName, it -> new HashMap<>());
+            componentDefinitionListMap.computeIfAbsent(componentDefinition, it -> new HashSet<>())
+                    .add(injectableMethod);
+            injectableMethod.requiredComponents.add(componentName);
+
+            Object component = context.getComponent(componentName);
+            if (component == null) {
+                injectableMethod.pendingComponents.add(componentName);
+                Set<ComponentDefinition<?>> pendingDefinitions = requiredComponents
+                        .computeIfAbsent(componentName, it -> new HashSet<>());
+                pendingDefinitions.add(componentDefinition);
+                return false;
+            }
+            args.add(component);
+        }
+        return true;
     }
 
     private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) {

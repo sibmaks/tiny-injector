@@ -1,15 +1,14 @@
 package com.github.sibmaks.ti.utils;
 
-import lombok.extern.slf4j.Slf4j;
 import com.github.sibmaks.ti.annotation.Component;
 import com.github.sibmaks.ti.reflection.AnnotationInfo;
 import com.github.sibmaks.ti.reflection.ClassInfo;
 import com.github.sibmaks.ti.reflection.FieldInfo;
 import com.github.sibmaks.ti.reflection.MethodInfo;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.*;
 import java.util.function.Predicate;
@@ -25,22 +24,20 @@ import java.util.zip.ZipFile;
  */
 @Slf4j
 public class ReflectionUtils {
+    private static final String CLASS_EXT = ".class";
+
     private ReflectionUtils() {
 
     }
 
     public static Map<String, ClassInfo<? super Object>> findComponents(ClassLoader classLoader, String packageName) throws IOException {
         Map<String, ClassInfo<? super Object>> components = new HashMap<>();
-        Set<ClassInfo<? super Object>> classes = getClasses(classLoader, packageName, aClass -> canBeComponent(aClass) &&
-                aClass.getAnnotationInfos().stream().anyMatch(it -> it.isInherited(Component.class)));
+        Set<ClassInfo<? super Object>> classes = getClasses(classLoader, packageName, ReflectionUtils::isComponent);
 
         Set<ClassInfo<? super Object>> abstractClasses = new HashSet<>();
         Set<ClassInfo<? super Object>> implClasses = new HashSet<>();
         for(ClassInfo<? super Object> clazz : classes) {
             String name = getComponentName(clazz);
-            if ("".equals(name)) {
-                name = StringUtils.toLowerCase1st(clazz.getSimpleName());
-            }
             if(clazz.isInterface() || clazz.isAbstract()) {
                 if(implClasses.stream().noneMatch(clazz::isAssignableFrom)) {
                     abstractClasses.add(clazz);
@@ -76,8 +73,12 @@ public class ReflectionUtils {
         for(AnnotationInfo annotationInfo : clazz.getAnnotationInfos()) {
             AnnotationInfo componentAI = annotationInfo.getInherited(Component.class);
             if(componentAI != null) {
-                Annotation annotation = componentAI.getAnnotation();
-                return ((Component) annotation).value();
+                Component annotation = (Component) componentAI.getAnnotation();
+                String name = annotation.value();
+                if ("".equals(name)) {
+                    return StringUtils.toLowerCase1st(clazz.getSimpleName());
+                }
+                return name;
             }
         }
         throw new IllegalStateException(String.format("Class %s is not component", clazz.getName()));
@@ -130,17 +131,14 @@ public class ReflectionUtils {
                 while (entries.hasMoreElements()) {
                     ZipEntry zipEntry = entries.nextElement();
                     String name = zipEntry.getName();
-                    if (name.startsWith(innerPath) && name.endsWith(".class")) {
-                        String className = name.substring(0, name.length() - ".class".length()).replace("/", ".");
-                        try {
-                            Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
-                            ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
-                            if (condition.test(classInfo)) {
-                                classInfos.add(classInfo);
-                            }
-                        } catch (ClassNotFoundException e) {
-                            log.error(e.getMessage(), e);
-                        }
+                    if (!name.startsWith(innerPath) && name.endsWith(CLASS_EXT)) {
+                        continue;
+                    }
+                    String className = name.substring(0, name.length() - CLASS_EXT.length()).replace("/", ".");
+                    Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
+                    ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                    if (condition.test(classInfo)) {
+                        classInfos.add(classInfo);
                     }
                 }
             }
@@ -157,29 +155,29 @@ public class ReflectionUtils {
             return Collections.emptySet();
         }
         File[] files = directory.listFiles();
-        if(files != null) {
-            Set<ClassInfo<? super Object>> classes = new HashSet<>();
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    if(!file.getName().contains(".'")) {
-                        classes.addAll(findClassesByFileProtocol(file, packageName + "." + file.getName(), condition));
+        if (files == null) {
+            return Collections.emptySet();
+        }
+        Set<ClassInfo<? super Object>> classes = new HashSet<>();
+        for (File file : files) {
+            if (file.isDirectory()) {
+                if (!file.getName().contains(".'")) {
+                    classes.addAll(findClassesByFileProtocol(file, packageName + "." + file.getName(), condition));
+                }
+            } else if (file.getName().endsWith(CLASS_EXT)) {
+                try {
+                    Class<? super Object> clazz = (Class<? super Object>) Class.forName(packageName + '.' +
+                            file.getName().substring(0, file.getName().length() - 6));
+                    ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                    if (condition.test(classInfo)) {
+                        classes.add(classInfo);
                     }
-                } else if (file.getName().endsWith(".class")) {
-                    try {
-                        Class<? super Object> clazz = (Class<? super Object>) Class.forName(packageName + '.' +
-                                file.getName().substring(0, file.getName().length() - 6));
-                        ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
-                        if(condition.test(classInfo)) {
-                            classes.add(classInfo);
-                        }
-                    } catch (ClassNotFoundException e) {
-                        log.error(e.getMessage(), e);
-                    }
+                } catch (ClassNotFoundException e) {
+                    log.error(e.getMessage(), e);
                 }
             }
-            return classes;
         }
-        return Collections.emptySet();
+        return classes;
     }
 
 
@@ -221,5 +219,10 @@ public class ReflectionUtils {
             }
         }
         return methods;
+    }
+
+    private static boolean isComponent(ClassInfo<? super Object> aClass) {
+        return canBeComponent(aClass) &&
+                aClass.getAnnotationInfos().stream().anyMatch(it -> it.isInherited(Component.class));
     }
 }
