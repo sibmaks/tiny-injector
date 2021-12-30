@@ -8,4 +8,8 @@ public class FieldInjectionException extends InitializationException {
     public FieldInjectionException(String message) {
         super(message);
     }
+
+    public FieldInjectionException(Throwable throwable) {
+        super(throwable);
+    }
 }

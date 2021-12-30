@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.ToString;
 import com.github.sibmaks.ti.exception.MethodInjectionException;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -48,6 +49,8 @@ public class MethodInfo {
         method.setAccessible(true);
         try {
             method.invoke(source, args);
+        } catch (InvocationTargetException e) {
+            throw new MethodInjectionException(e.getCause());
         } catch (Exception e) {
             throw new MethodInjectionException(e);
         }

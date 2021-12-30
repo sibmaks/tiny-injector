@@ -46,7 +46,11 @@ public class Injector {
             log.debug("Context built");
 
             return context;
-        } catch (IOException | NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+        } catch (InvocationTargetException e) {
+            throw new InitializationException(e.getCause());
+        }  catch (InitializationException e) {
+            throw e;
+        } catch (Exception e) {
             throw new InitializationException(e);
         }
     }
@@ -57,20 +61,16 @@ public class Injector {
      * @return
      */
     private static List<IContextListener> findContextListeners(Map<String, ClassInfo<? super Object>> globalComponents)
-            throws NoSuchMethodException, InstantiationException, IllegalAccessException {
+            throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         List<String> listenerNames = new ArrayList<>();
         List<IContextListener> listeners = new ArrayList<>();
         for (Map.Entry<String, ClassInfo<? super Object>> it : globalComponents.entrySet()) {
             if (IContextListener.class.isAssignableFrom(it.getValue().get())) {
-                try {
-                    Constructor<? super Object> constructor = it.getValue().get().getDeclaredConstructor();
-                    constructor.setAccessible(true);
-                    Object instance = constructor.newInstance();
-                    constructor.setAccessible(false);
-                    listeners.add((IContextListener) instance);
-                } catch (InvocationTargetException e) {
-                    throw new RuntimeException(e);
-                }
+                Constructor<? super Object> constructor = it.getValue().get().getDeclaredConstructor();
+                constructor.setAccessible(true);
+                Object instance = constructor.newInstance();
+                constructor.setAccessible(false);
+                listeners.add((IContextListener) instance);
                 listenerNames.add(it.getKey());
             }
         }
@@ -81,18 +81,14 @@ public class Injector {
     }
 
     private static IMutableContext buildContext(Map<String, ClassInfo<? super Object>> globalComponents,
-                                                List<IContextListener> contextListeners) {
+                                                List<IContextListener> contextListeners)
+            throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         SimpleContext context = new SimpleContext(contextListeners);
         try {
             initComponents(globalComponents, context);
-        } catch (InvocationTargetException e) {
-            context.clear();
-            throw new RuntimeException(e.getCause());
-        } catch (Exception e) {
-            context.clear();
-            throw new InitializationException(e);
+        } finally {
+            Runtime.getRuntime().addShutdownHook(new Thread(context::clear));
         }
-        Runtime.getRuntime().addShutdownHook(new Thread(context::clear));
         context.onInitializationFinished();
         return context;
     }

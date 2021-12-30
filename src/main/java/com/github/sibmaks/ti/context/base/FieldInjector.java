@@ -56,7 +56,7 @@ public class FieldInjector implements IContextListener {
             doComponentInjections(componentDefinition, context);
             doPendingInjections(componentDefinition, context);
         } catch (IllegalAccessException e) {
-            throw new InitializationException(e);
+            throw new FieldInjectionException(e);
         }
     }
 
