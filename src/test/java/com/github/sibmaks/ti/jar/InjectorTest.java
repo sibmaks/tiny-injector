@@ -14,7 +14,7 @@ import other.test.pckg.ti.BComponent;
 class InjectorTest {
 
     @Test
-    void componentsFromJarInjectedToo() throws Throwable {
+    void componentsFromJarInjectedToo() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName(), AComponent.class.getPackage().getName());
         AComponent aComponent = context.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

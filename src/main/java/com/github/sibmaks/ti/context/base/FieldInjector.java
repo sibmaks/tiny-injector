@@ -1,12 +1,13 @@
 package com.github.sibmaks.ti.context.base;
 
-import com.github.sibmaks.ti.context.IContext;
 import com.github.sibmaks.ti.ComponentDefinition;
 import com.github.sibmaks.ti.annotation.Component;
+import com.github.sibmaks.ti.context.IContext;
 import com.github.sibmaks.ti.context.IMutableContext;
 import com.github.sibmaks.ti.context.UpdateType;
 import com.github.sibmaks.ti.context.listener.IContextListener;
 import com.github.sibmaks.ti.exception.FieldInjectionException;
+import com.github.sibmaks.ti.exception.InitializationException;
 import com.github.sibmaks.ti.reflection.AnnotationInfo;
 import com.github.sibmaks.ti.reflection.ClassInfo;
 import com.github.sibmaks.ti.reflection.FieldInfo;
@@ -50,13 +51,17 @@ public class FieldInjector implements IContextListener {
     }
 
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
-        doComponentInjections(componentDefinition, context);
-        doPendingInjections(componentDefinition, context);
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
+        try {
+            doComponentInjections(componentDefinition, context);
+            doPendingInjections(componentDefinition, context);
+        } catch (IllegalAccessException e) {
+            throw new InitializationException(e);
+        }
     }
 
-    private void doComponentInjections(ComponentDefinition<?> componentDefinition,
-                                       IMutableContext context) throws Exception {
+    private void doComponentInjections(ComponentDefinition<?> componentDefinition, IMutableContext context)
+            throws IllegalAccessException {
         ClassInfo<?> classInfo = componentDefinition.getComponentClass();
         boolean fullyInjected = true;
         for (FieldInfo fieldInfo : classInfo.getFieldInfos()) {
@@ -97,7 +102,8 @@ public class FieldInjector implements IContextListener {
         }
     }
 
-    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context)
+            throws IllegalAccessException {
         String name = componentDefinition.getName();
         Set<ComponentDefinition<?>> definitions = requiredComponents.get(name);
         if(definitions == null) {
@@ -120,7 +126,7 @@ public class FieldInjector implements IContextListener {
     }
 
     @Override
-    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) {
         if(updateType != UpdateType.INSTANCE_CHANGED) {
             return;
         }
@@ -131,7 +137,11 @@ public class FieldInjector implements IContextListener {
         for (Map.Entry<ComponentDefinition<?>, List<FieldInfo>> entry : componentDefinitionListMap.entrySet()) {
             ComponentDefinition<?> definition = entry.getKey();
             for (FieldInfo fieldInfo : entry.getValue()) {
-                fieldInfo.set(definition.getComponentInstance(), componentDefinition.getComponentInstance());
+                try {
+                    fieldInfo.set(definition.getComponentInstance(), componentDefinition.getComponentInstance());
+                } catch (IllegalAccessException e) {
+                    throw new InitializationException(e);
+                }
             }
         }
     }

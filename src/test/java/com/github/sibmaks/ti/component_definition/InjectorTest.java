@@ -13,7 +13,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void componentDefinitionCustomizedBeansRejected() throws Throwable {
+    void componentDefinitionCustomizedBeansRejected() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
 
         ComponentDefinition<AComponent> componentDefinition = context.getComponentDefinition("aComponent");

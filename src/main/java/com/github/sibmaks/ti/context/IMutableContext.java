@@ -1,5 +1,6 @@
 package com.github.sibmaks.ti.context;
 
+import com.github.sibmaks.ti.exception.ContextModificationException;
 import com.github.sibmaks.ti.reflection.ClassInfo;
 
 /**
@@ -16,9 +17,9 @@ public interface IMutableContext extends IContext {
      * @param clazz component class
      * @param component component instance
      * @param <T> component type
-     * @throws Exception can throw exception on insert, for example insert duplicate
+     * @throws ContextModificationException can throw exception on insert, for example insert duplicate
      */
-    <T> void add(String name, ClassInfo<T> clazz, T component) throws Exception;
+    <T> void add(String name, ClassInfo<T> clazz, T component) throws ContextModificationException;
 
     /**
      * Update component instance.
@@ -28,9 +29,9 @@ public interface IMutableContext extends IContext {
      * @param name component name
      * @param newInstance new component instance
      * @param <T> component type
-     * @throws Exception can be thrown if component not found or type is mismatch, also some of listener can throw exception
+     * @throws ContextModificationException can be thrown if component not found or type is mismatch, also some of listener can throw exception
      */
-    <T> void update(String name, T newInstance) throws Exception;
+    <T> void update(String name, T newInstance) throws ContextModificationException;
 
     /**
      * Add mark to component definition, if mark already exists do nothing.
@@ -39,10 +40,9 @@ public interface IMutableContext extends IContext {
      *
      * @param name component name
      * @param mark mark
-     * @param <T> component type
-     * @throws Exception can be thrown if component not found or some of the listeners throw an exception
+     * @throws ContextModificationException can be thrown if component not found or some of the listeners throw an exception
      */
-    <T> void addMark(String name, Object mark) throws Exception;
+    void addMark(String name, Object mark) throws ContextModificationException;
 
     /**
      * Clear context state

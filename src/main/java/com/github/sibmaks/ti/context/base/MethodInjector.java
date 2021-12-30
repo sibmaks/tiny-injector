@@ -50,14 +50,12 @@ public class MethodInjector implements IContextListener {
     }
 
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context)
-            throws Exception {
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         doComponentInjections(componentDefinition, context);
         doPendingInjections(componentDefinition, context);
     }
 
-    private void doComponentInjections(ComponentDefinition<?> componentDefinition, IMutableContext context)
-            throws Exception {
+    private void doComponentInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         ClassInfo<?> classInfo = componentDefinition.getComponentClass();
         boolean fullyInjected = true;
         for (MethodInfo methodInfo : classInfo.getMethodInfos()) {
@@ -113,7 +111,7 @@ public class MethodInjector implements IContextListener {
         }
     }
 
-    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         String name = componentDefinition.getName();
         Set<ComponentDefinition<?>> definitions = requiredComponents.get(name);
         if(definitions == null) {

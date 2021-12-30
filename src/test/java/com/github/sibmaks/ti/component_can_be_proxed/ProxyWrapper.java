@@ -19,7 +19,7 @@ public class ProxyWrapper implements IContextListener {
     static final List<String> proxied = new ArrayList<>();
 
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         Object instance = componentDefinition.getComponentInstance();
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(componentDefinition.getComponentClass().get());

@@ -7,7 +7,6 @@ import com.github.sibmaks.ti.reflection.ClassInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,28 +16,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class SimpleContextTest {
     @Test
-    public void cantAddComponentWhenContextIsInitialized() throws Exception {
+    void cantAddComponentWhenContextIsInitialized() {
         SimpleContext simpleContext = new SimpleContext(Collections.emptyList());
         simpleContext.onInitializationFinished();
         Assertions.assertThrows(IllegalStateException.class, () -> simpleContext.add("any", null, null));
     }
 
     @Test
-    public void cantUpdateComponentWhenContextIsInitialized() throws Exception {
+    void cantUpdateComponentWhenContextIsInitialized() {
         SimpleContext simpleContext = new SimpleContext(Collections.emptyList());
         simpleContext.onInitializationFinished();
         Assertions.assertThrows(IllegalStateException.class, () -> simpleContext.update("any", null));
     }
 
     @Test
-    public void cantMarkComponentWhenContextIsInitialized() throws Exception {
+    void cantMarkComponentWhenContextIsInitialized() {
         SimpleContext simpleContext = new SimpleContext(Collections.emptyList());
         simpleContext.onInitializationFinished();
         Assertions.assertThrows(IllegalStateException.class, () -> simpleContext.addMark("any", null));
     }
 
     @Test
-    public void onAddDuplicateMarkListenerWontCalled() throws Exception {
+    void onAddDuplicateMarkListenerWontCalled() {
         AtomicInteger atomicInteger = new AtomicInteger();
 
         IContextListener listener = new IContextListener() {
@@ -48,7 +47,7 @@ class SimpleContextTest {
             }
         };
 
-        SimpleContext simpleContext = new SimpleContext(Arrays.asList(listener));
+        SimpleContext simpleContext = new SimpleContext(Collections.singletonList(listener));
         simpleContext.add("any", ClassInfo.from(Component.class), new Component());
         simpleContext.addMark("any", "mark1");
         simpleContext.addMark("any", "mark1");
@@ -56,7 +55,7 @@ class SimpleContextTest {
     }
 
     @Test
-    public void ifUpdateNotChangeInstanceListenerNotCalled() throws Exception {
+    void ifUpdateNotChangeInstanceListenerNotCalled() {
         AtomicInteger atomicInteger = new AtomicInteger();
 
         IContextListener listener = new IContextListener() {
@@ -66,7 +65,7 @@ class SimpleContextTest {
             }
         };
 
-        SimpleContext simpleContext = new SimpleContext(Arrays.asList(listener));
+        SimpleContext simpleContext = new SimpleContext(Collections.singletonList(listener));
         Component component = new Component();
         simpleContext.add("any", ClassInfo.from(Component.class), component);
         simpleContext.update("any", component);

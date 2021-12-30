@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void recursiveInjections() throws Throwable {
+    void recursiveInjections() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         ARecursiveComponent aComponent = context.getComponent("aComponent");
         BRecursiveComponent bComponent = context.getComponent("bComponent");

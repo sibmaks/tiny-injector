@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void recursiveAnnotationSupported() throws Throwable {
+    void recursiveAnnotationSupported() {
         IContext iContext = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = iContext.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

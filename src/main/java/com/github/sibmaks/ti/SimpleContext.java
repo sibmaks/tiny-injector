@@ -3,9 +3,13 @@ package com.github.sibmaks.ti;
 import com.github.sibmaks.ti.context.IMutableContext;
 import com.github.sibmaks.ti.context.UpdateType;
 import com.github.sibmaks.ti.context.listener.IContextListener;
+import com.github.sibmaks.ti.exception.ContextModificationException;
 import com.github.sibmaks.ti.reflection.ClassInfo;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -17,12 +21,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created at 18-08-2021
  */
 class SimpleContext implements IMutableContext {
+    private static final String CONTEXT_INITIALIZED_ERROR = "Context is already initialized";
+
     private final Map<String, ComponentDefinition<?>> components;
     private final List<IContextListener> contextListeners;
     private volatile boolean initialized;
     private final Lock stateLock = new ReentrantLock();
 
-    SimpleContext(List<IContextListener> contextListeners) throws Exception {
+    SimpleContext(List<IContextListener> contextListeners) {
         this.components = new HashMap<>();
         this.contextListeners = Collections.unmodifiableList(contextListeners);
 
@@ -32,11 +38,11 @@ class SimpleContext implements IMutableContext {
     }
 
     @Override
-    public<T> void add(String name, ClassInfo<T> clazz, T component) throws Exception {
+    public<T> void add(String name, ClassInfo<T> clazz, T component) throws ContextModificationException {
         stateLock.lock();
         try {
             if(initialized) {
-                throw new IllegalStateException("Context is already initialized");
+                throw new IllegalStateException(CONTEXT_INITIALIZED_ERROR);
             }
             ComponentDefinition<? super Object> definition = new ComponentDefinition<>(name, (ClassInfo<Object>) clazz, component);
             ComponentDefinition<?> previous = components.putIfAbsent(name, definition);
@@ -54,11 +60,11 @@ class SimpleContext implements IMutableContext {
     }
 
     @Override
-    public<T> void update(String name, T newInstance) throws Exception {
+    public<T> void update(String name, T newInstance) {
         stateLock.lock();
         try {
             if (initialized) {
-                throw new IllegalStateException("Context is already initialized");
+                throw new IllegalStateException(CONTEXT_INITIALIZED_ERROR);
             }
             ComponentDefinition<T> componentDefinition = getComponentDefinition(name);
             if(componentDefinition.getComponentInstance() == newInstance) {
@@ -74,13 +80,13 @@ class SimpleContext implements IMutableContext {
     }
 
     @Override
-    public<T> void addMark(String name, Object mark) throws Exception {
+    public void addMark(String name, Object mark) throws ContextModificationException {
         stateLock.lock();
         try {
             if (initialized) {
-                throw new IllegalStateException("Context is already initialized");
+                throw new IllegalStateException(CONTEXT_INITIALIZED_ERROR);
             }
-            ComponentDefinition<T> componentDefinition = getComponentDefinition(name);
+            ComponentDefinition<?> componentDefinition = getComponentDefinition(name);
             if (componentDefinition.mark(mark)) {
                 for (IContextListener listener : contextListeners) {
                     listener.onUpdated(UpdateType.MARKED, componentDefinition, this);
@@ -110,7 +116,7 @@ class SimpleContext implements IMutableContext {
         return (T) definition.getComponentInstance();
     }
 
-    public void onInitializationFinished() throws Exception {
+    public void onInitializationFinished() {
         for (IContextListener listener : contextListeners) {
             listener.onInitialized(this);
         }

@@ -13,6 +13,7 @@ class InjectorTest {
 
     @Test
     void cantInjectFinal() {
-        Assertions.assertThrows(FieldInjectionException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
+        String name = InjectorTest.class.getPackage().getName();
+        Assertions.assertThrows(FieldInjectionException.class, () -> Injector.buildInjections(name));
     }
 }

@@ -17,7 +17,7 @@ import java.util.Set;
  */
 class ProviderInjectorTest {
     @Test
-    public void exceptionIfPendingProviderNotInitialized() throws Exception {
+    void exceptionIfPendingProviderNotInitialized() {
         ProviderProcessor providerProcessor = new ProviderProcessor();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
@@ -32,7 +32,7 @@ class ProviderInjectorTest {
     }
 
     @Test
-    public void providerCantOverrideExistingComponents() {
+    void providerCantOverrideExistingComponents() {
         ProviderProcessor providerProcessor = new ProviderProcessor();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
@@ -46,7 +46,7 @@ class ProviderInjectorTest {
     }
 
     @Test
-    public void providerCalledIfInjectionComplete() throws Exception {
+    void providerCalledIfInjectionComplete() throws Exception {
         ProviderProcessor providerProcessor = new ProviderProcessor();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
@@ -66,7 +66,7 @@ class ProviderInjectorTest {
     }
 
     @Test
-    public void providerCallPendingIfNotFullyInjected() throws Exception {
+    void providerCallPendingIfNotFullyInjected() throws Exception {
         ProviderProcessor providerProcessor = new ProviderProcessor();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);
@@ -95,7 +95,7 @@ class ProviderInjectorTest {
     }
 
     @Test
-    public void providerCallPendingCantOverrideExisting() throws Exception {
+    void providerCallPendingCantOverrideExisting() throws Exception {
         ProviderProcessor providerProcessor = new ProviderProcessor();
 
         ComponentDefinition<AProvider> componentDefinition = buildComponentDefinition("stub", new AProvider(), AProvider.class);

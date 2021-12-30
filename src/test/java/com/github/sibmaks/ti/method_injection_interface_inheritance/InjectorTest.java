@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void methodInjectionsSaveAnnotationsFromInterface() throws Throwable {
+    void methodInjectionsSaveAnnotationsFromInterface() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         IComponent component = context.getComponent("aComponent");
         Assertions.assertNotNull(component);

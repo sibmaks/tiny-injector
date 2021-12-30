@@ -48,7 +48,7 @@ public class ProviderProcessor implements IContextListener {
     }
 
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         ClassInfo<?> componentClass = componentDefinition.getComponentClass();
         if(Provider.class.isAssignableFrom(componentClass.get())) {
             MethodInfo getMethod = componentClass.getMethodInfos().stream().filter(it -> it.getName().equals("get"))
@@ -84,7 +84,7 @@ public class ProviderProcessor implements IContextListener {
     }
 
     @Override
-    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) {
         if(updateType != UpdateType.MARKED) {
             return;
         }

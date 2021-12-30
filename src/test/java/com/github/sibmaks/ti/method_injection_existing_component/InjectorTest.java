@@ -16,6 +16,7 @@ class InjectorTest {
      */
     @Test
     void namedAnnotationsShouldHaveValidName() {
-        Assertions.assertThrows(MethodInjectionException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
+        String name = InjectorTest.class.getPackage().getName();
+        Assertions.assertThrows(MethodInjectionException.class, () -> Injector.buildInjections(name));
     }
 }

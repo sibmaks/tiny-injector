@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void providerCanChangeComponentName() throws Throwable {
+    void providerCanChangeComponentName() {
         IContext iContext = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = iContext.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

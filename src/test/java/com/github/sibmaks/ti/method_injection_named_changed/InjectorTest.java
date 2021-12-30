@@ -15,7 +15,7 @@ class InjectorTest {
      * Method will be injected by type name if @Named not presented
      */
     @Test
-    void injectWithFilledNamedAnnotation() throws Throwable {
+    void injectWithFilledNamedAnnotation() {
         IContext iContext = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = iContext.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

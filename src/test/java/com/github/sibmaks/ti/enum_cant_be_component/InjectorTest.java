@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void enumAsComponent() throws Throwable {
+    void enumAsComponent() {
         IContext iContext = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         EnumComponent enumComponent = iContext.getComponent("enumComponent");
         Assertions.assertNull(enumComponent);

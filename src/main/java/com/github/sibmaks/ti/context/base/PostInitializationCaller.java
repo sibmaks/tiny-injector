@@ -42,8 +42,7 @@ public class PostInitializationCaller implements IContextListener {
     }
 
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context)
-            throws Exception {
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         ClassInfo<?> classInfo = componentDefinition.getComponentClass();
         for (MethodInfo methodInfo : classInfo.getMethodInfos()) {
             if(methodInfo.getAnnotationInfos().stream().noneMatch(it -> it.isInherited(PostInitialization.class))) {

@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.listener.IContextListener;
 @Component
 public class Customizer implements IContextListener {
     @Override
-    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    public void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
         if("aComponent".equals(componentDefinition.getName())) {
             AComponent component = new AComponent();
             component.name = "dog";

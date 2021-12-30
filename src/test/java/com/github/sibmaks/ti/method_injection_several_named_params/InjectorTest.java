@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void methodInjectionSupportSeveralNamedParam() throws Throwable {
+    void methodInjectionSupportSeveralNamedParam() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = context.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

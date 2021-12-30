@@ -13,10 +13,9 @@ class InjectorTest {
 
     /**
      * If class implement interface, what marked as a component then class will be component too
-     * @throws Exception
      */
     @Test
-    void interfaceInheritance() throws Throwable {
+    void interfaceInheritance() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         BaseInterface baseInterface = context.getComponent("interface");
         InterfaceImpl anInterface = context.getComponent("interface");

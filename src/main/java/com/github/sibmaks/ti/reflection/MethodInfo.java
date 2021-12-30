@@ -48,8 +48,8 @@ public class MethodInfo {
         method.setAccessible(true);
         try {
             method.invoke(source, args);
-        } catch (Throwable throwable) {
-            throw new MethodInjectionException(throwable);
+        } catch (Exception e) {
+            throw new MethodInjectionException(e);
         }
         method.setAccessible(false);
     }

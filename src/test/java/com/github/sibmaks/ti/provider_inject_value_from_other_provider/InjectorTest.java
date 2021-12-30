@@ -12,7 +12,7 @@ import com.github.sibmaks.ti.context.IContext;
 class InjectorTest {
 
     @Test
-    void providerCanInjectValueFromOtherProvider() throws Throwable {
+    void providerCanInjectValueFromOtherProvider() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         BComponent bComponent = context.getComponent("bComponent");
         Assertions.assertNotNull(bComponent);

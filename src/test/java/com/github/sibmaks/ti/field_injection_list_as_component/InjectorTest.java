@@ -14,7 +14,7 @@ import java.util.List;
 class InjectorTest {
 
     @Test
-    void listCanBeProviderAsComponent() throws Throwable {
+    void listCanBeProviderAsComponent() {
         IContext context = Injector.buildInjections(InjectorTest.class.getPackage().getName());
         AComponent aComponent = context.getComponent("aComponent");
         Assertions.assertNotNull(aComponent);

@@ -12,6 +12,7 @@ class InjectorTest {
 
     @Test
     void contextListenerShouldHaveDefaultConstructor() {
-        Assertions.assertThrows(NoSuchMethodException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
+        String name = InjectorTest.class.getPackage().getName();
+        Assertions.assertThrows(NoSuchMethodException.class, () -> Injector.buildInjections(name));
     }
 }

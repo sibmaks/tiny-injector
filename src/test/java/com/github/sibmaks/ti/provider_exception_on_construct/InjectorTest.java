@@ -12,6 +12,7 @@ class InjectorTest {
 
     @Test
     void providerShouldHaveDefaultConstructor() {
-        Assertions.assertThrows(RuntimeException.class, () -> Injector.buildInjections(InjectorTest.class.getPackage().getName()));
+        String name = InjectorTest.class.getPackage().getName();
+        Assertions.assertThrows(RuntimeException.class, () -> Injector.buildInjections(name));
     }
 }

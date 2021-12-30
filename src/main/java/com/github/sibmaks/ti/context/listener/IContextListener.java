@@ -19,7 +19,7 @@ public interface IContextListener {
      * Context can add some component definitions into context
      * @param mutableContext modifiable context
      */
-    default void onCreated(IMutableContext mutableContext) throws Exception {
+    default void onCreated(IMutableContext mutableContext) {
 
     }
 
@@ -28,7 +28,7 @@ public interface IContextListener {
      * Context can't be modified since this time
      * @param context read-only context
      */
-    default void onInitialized(IContext context) throws Exception {
+    default void onInitialized(IContext context) {
 
     }
 
@@ -37,7 +37,7 @@ public interface IContextListener {
      *
      * @param context modifiable context
      */
-    default void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    default void onUpdated(UpdateType updateType, ComponentDefinition<?> componentDefinition, IMutableContext context) {
 
     }
 
@@ -46,7 +46,7 @@ public interface IContextListener {
      * @param componentDefinition not null component definition
      * @param context modifiable context
      */
-    default void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) throws Exception {
+    default void onAddComponentDefinition(ComponentDefinition<?> componentDefinition, IMutableContext context) {
 
     }
 }

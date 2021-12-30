@@ -1,13 +1,12 @@
 package com.github.sibmaks.ti.context.base;
 
-import com.github.sibmaks.ti.context.base.FieldInjector;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import com.github.sibmaks.ti.ComponentDefinition;
 import com.github.sibmaks.ti.context.IMutableContext;
 import com.github.sibmaks.ti.context.UpdateType;
 import com.github.sibmaks.ti.reflection.ClassInfo;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -18,7 +17,7 @@ import javax.inject.Named;
  */
 class FieldInjectorTest {
     @Test
-    public void fieldReInjectedIfComponentChanged() throws Exception {
+    void fieldReInjectedIfComponentChanged() {
         FieldInjector methodInjector = new FieldInjector();
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);

@@ -11,12 +11,12 @@ import java.lang.reflect.Field;
  */
 class AnnotationInfoTest {
     @Test
-    public void annotationForNullClassException() {
+    void annotationForNullClassException() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> AnnotationInfo.forClass(null));
     }
 
     @Test
-    public void fieldAnnotationForObjectIsEmpty() throws NoSuchFieldException, IllegalAccessException {
+    void fieldAnnotationForObjectIsEmpty() throws NoSuchFieldException, IllegalAccessException {
         Field field = AComponent.class.getDeclaredField("bComponent");
 
         Field clazzField = field.getClass().getDeclaredField("clazz");

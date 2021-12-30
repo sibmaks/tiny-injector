@@ -3,6 +3,7 @@ package com.github.sibmaks.ti;
 import com.github.sibmaks.ti.context.IContext;
 import com.github.sibmaks.ti.context.IMutableContext;
 import com.github.sibmaks.ti.context.base.FieldInjector;
+import com.github.sibmaks.ti.exception.InitializationException;
 import com.github.sibmaks.ti.utils.ReflectionUtils;
 import lombok.extern.slf4j.Slf4j;
 import com.github.sibmaks.ti.context.listener.IContextListener;
@@ -27,32 +28,36 @@ public class Injector {
 
     }
 
-    public static IContext buildInjections(ClassLoader classLoader, Set<String> scanPackages) throws Throwable {
+    public static IContext buildInjections(ClassLoader classLoader, Set<String> scanPackages) {
         scanPackages = new HashSet<>(scanPackages);
         scanPackages.add(FieldInjector.class.getPackage().getName());
 
-        log.debug("Search components");
-        Map<String, ClassInfo<? super Object>> globalComponents = findComponents(classLoader, scanPackages);
-        log.debug("Components found");
+        try {
+            log.debug("Search components");
+            Map<String, ClassInfo<? super Object>> globalComponents = findComponents(classLoader, scanPackages);
+            log.debug("Components found");
 
-        log.debug("Search context listeners");
-        List<IContextListener> contextListeners = findContextListeners(globalComponents);
-        log.debug("Listeners found");
+            log.debug("Search context listeners");
+            List<IContextListener> contextListeners = findContextListeners(globalComponents);
+            log.debug("Listeners found");
 
-        log.debug("Build context");
-        IContext context = buildContext(globalComponents, contextListeners);
-        log.debug("Context built");
+            log.debug("Build context");
+            IContext context = buildContext(globalComponents, contextListeners);
+            log.debug("Context built");
 
-        return context;
+            return context;
+        } catch (Exception e) {
+            throw new InitializationException(e);
+        }
     }
 
     /**
      * Method is responsible for search context listeners (and removing them from global components register)
      * @param globalComponents
      * @return
-     * @throws Throwable
      */
-    private static List<IContextListener> findContextListeners(Map<String, ClassInfo<? super Object>> globalComponents) throws Throwable {
+    private static List<IContextListener> findContextListeners(Map<String, ClassInfo<? super Object>> globalComponents)
+            throws NoSuchMethodException, InstantiationException, IllegalAccessException {
         List<String> listenerNames = new ArrayList<>();
         List<IContextListener> listeners = new ArrayList<>();
         for (Map.Entry<String, ClassInfo<? super Object>> it : globalComponents.entrySet()) {
@@ -64,7 +69,7 @@ public class Injector {
                     constructor.setAccessible(false);
                     listeners.add((IContextListener) instance);
                 } catch (InvocationTargetException e) {
-                    throw e.getCause();
+                    throw new RuntimeException(e);
                 }
                 listenerNames.add(it.getKey());
             }
@@ -76,16 +81,16 @@ public class Injector {
     }
 
     private static IMutableContext buildContext(Map<String, ClassInfo<? super Object>> globalComponents,
-                                                List<IContextListener> contextListeners) throws Throwable {
+                                                List<IContextListener> contextListeners) {
         SimpleContext context = new SimpleContext(contextListeners);
         try {
             initComponents(globalComponents, context);
         } catch (InvocationTargetException e) {
             context.clear();
-            throw e.getCause();
-        } catch (Throwable throwable) {
+            throw new RuntimeException(e.getCause());
+        } catch (Exception e) {
             context.clear();
-            throw throwable;
+            throw new InitializationException(e);
         }
         Runtime.getRuntime().addShutdownHook(new Thread(context::clear));
         context.onInitializationFinished();
@@ -93,7 +98,7 @@ public class Injector {
     }
 
     private static void initComponents(Map<String, ClassInfo<? super Object>> globalComponents, IMutableContext context)
-            throws Exception {
+            throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         for (Map.Entry<String, ClassInfo<? super Object>> entry : globalComponents.entrySet()) {
             Constructor<? super Object> constructor = entry.getValue().get().getDeclaredConstructor();
             constructor.setAccessible(true);
@@ -121,12 +126,12 @@ public class Injector {
         return globalComponents;
     }
 
-    public static IContext buildInjections(Set<String> scanPackages) throws Throwable {
+    public static IContext buildInjections(Set<String> scanPackages) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         return buildInjections(classLoader, scanPackages);
     }
 
-    public static IContext buildInjections(String ... scanPackages) throws Throwable {
+    public static IContext buildInjections(String ... scanPackages) {
         Set<String> packages = new HashSet<>(Arrays.asList(scanPackages));
         return buildInjections(packages);
     }

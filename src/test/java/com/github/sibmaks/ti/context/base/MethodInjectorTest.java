@@ -1,13 +1,12 @@
 package com.github.sibmaks.ti.context.base;
 
-import com.github.sibmaks.ti.context.base.MethodInjector;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import com.github.sibmaks.ti.ComponentDefinition;
 import com.github.sibmaks.ti.context.IMutableContext;
 import com.github.sibmaks.ti.context.UpdateType;
 import com.github.sibmaks.ti.reflection.ClassInfo;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.inject.Inject;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class MethodInjectorTest {
     @Test
-    public void methodReInjectedIfComponentChanged() throws Exception {
+    void methodReInjectedIfComponentChanged() {
         MethodInjector methodInjector = new MethodInjector();
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
@@ -69,7 +68,7 @@ class MethodInjectorTest {
     }
 
     @Test
-    public void methodPendingInjection() throws Exception {
+    void methodPendingInjection() {
         MethodInjector methodInjector = new MethodInjector();
 
         IMutableContext mutableContext = Mockito.mock(IMutableContext.class);
