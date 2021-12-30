@@ -93,9 +93,9 @@ public class FieldInjector implements IContextListener {
                         .computeIfAbsent(componentName, it -> new HashSet<>());
                 pendingDefinitions.add(componentDefinition);
                 fullyInjected = false;
-                continue;
+            } else {
+                fieldInfo.set(componentDefinition.getComponentBaseInstance(), component);
             }
-            fieldInfo.set(componentDefinition.getComponentBaseInstance(), component);
         }
         if(fullyInjected) {
             context.addMark(componentDefinition.getName(), FieldInjector.class);

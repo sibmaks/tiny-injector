@@ -135,15 +135,7 @@ public class ReflectionUtils {
                         continue;
                     }
                     String className = name.substring(0, name.length() - CLASS_EXT.length()).replace("/", ".");
-                    try {
-                        Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
-                        ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
-                        if (condition.test(classInfo)) {
-                            classInfos.add(classInfo);
-                        }
-                    } catch (ClassNotFoundException e) {
-                        log.error(e.getMessage(), e);
-                    }
+                    Optional.ofNullable(buildClassInfo(condition, className)).ifPresent(classInfos::add);
                 }
             }
             return classInfos;
@@ -151,6 +143,19 @@ public class ReflectionUtils {
             log.error("Get classes from jar exception", e);
         }
         return Collections.emptySet();
+    }
+
+    private static ClassInfo<? super Object> buildClassInfo(Predicate<ClassInfo<? super Object>> condition, String className) {
+        try {
+            Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
+            ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+            if (condition.test(classInfo)) {
+                return classInfo;
+            }
+        } catch (ClassNotFoundException e) {
+            log.error(e.getMessage(), e);
+        }
+        return null;
     }
 
     private static Set<ClassInfo<? super Object>> findClassesByFileProtocol(File directory, String packageName,
