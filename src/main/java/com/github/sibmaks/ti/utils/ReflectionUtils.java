@@ -135,10 +135,14 @@ public class ReflectionUtils {
                         continue;
                     }
                     String className = name.substring(0, name.length() - CLASS_EXT.length()).replace("/", ".");
-                    Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
-                    ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
-                    if (condition.test(classInfo)) {
-                        classInfos.add(classInfo);
+                    try {
+                        Class<? super Object> clazz = (Class<? super Object>) Class.forName(className);
+                        ClassInfo<? super Object> classInfo = ClassInfo.from(clazz);
+                        if (condition.test(classInfo)) {
+                            classInfos.add(classInfo);
+                        }
+                    } catch (ClassNotFoundException e) {
+                        log.error(e.getMessage(), e);
                     }
                 }
             }

@@ -71,7 +71,7 @@ public class MethodInjector implements IContextListener {
             Set<InjectableMethod> injectableMethods = register.computeIfAbsent(componentDefinition, it -> new HashSet<>());
             InjectableMethod injectableMethod = new InjectableMethod(methodInfo);
             injectableMethods.add(injectableMethod);
-            fullyInjected = proceedMethodInjection(componentDefinition, context, method, args, injectableMethod);
+            fullyInjected &= proceedMethodInjection(componentDefinition, context, method, args, injectableMethod);
             if (args.size() == method.getParameterCount()) {
                 methodInfo.invoke(componentDefinition.getComponentBaseInstance(), args.toArray());
             }
@@ -83,6 +83,7 @@ public class MethodInjector implements IContextListener {
 
     private boolean proceedMethodInjection(ComponentDefinition<?> componentDefinition, IMutableContext context,
                                            Method method, List<Object> args, InjectableMethod injectableMethod) {
+        boolean fullyInjected = true;
         for (int i = 0; i < method.getParameterCount(); i++) {
             Named named = (Named) Arrays.stream(method.getParameterAnnotations()[i])
                     .map(AnnotationInfo::from)
@@ -109,11 +110,11 @@ public class MethodInjector implements IContextListener {
                 Set<ComponentDefinition<?>> pendingDefinitions = requiredComponents
                         .computeIfAbsent(componentName, it -> new HashSet<>());
                 pendingDefinitions.add(componentDefinition);
-                return false;
+                fullyInjected = false;
             }
             args.add(component);
         }
-        return true;
+        return fullyInjected;
     }
 
     private void doPendingInjections(ComponentDefinition<?> componentDefinition, IMutableContext context) {
